@@ -1,0 +1,1739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProjX Monitor Dashboard (Vanilla JS)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom scrollbar for aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; /* slate-300 */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; /* slate-400 */
+        }
+        .animate-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-700">
+
+    <div id="app" class="flex h-screen">
+        <!-- Application will be rendered here -->
+    </div>
+
+    <script>
+        // --- LOGIN VALIDATION ---
+        function validateLogin() {
+            const storedUser = sessionStorage.getItem('currentUser');
+            if (!storedUser) {
+                window.location.replace('index.html');
+                return null;
+            }
+            try {
+                return JSON.parse(storedUser);
+            } catch (e) {
+                window.location.replace('index.html');
+                return null;
+            }
+        }
+
+        const loggedInUser = validateLogin();
+        
+        // If user not found, page will redirect automatically
+        if (!loggedInUser) {
+            document.body.innerHTML = '<div class="h-screen flex items-center justify-center">Redirecting to login...</div>';
+        }
+
+        // --- Utility Functions (Icons as SVG strings) ---
+        const Icons = {
+            Dashboard: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="3" y="12" rx="1"/><rect width="7" height="5" x="14" y="16" rx="1"/></svg>',
+            FileText: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="21" y2="21"/></svg>',
+            Users: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+            BookOpen: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V15a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4.5"/><path d="M22 20.5v-2a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v2.5"/><path d="M10 21v-7"/><path d="M14 21v-7"/></svg>',
+            Settings: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.78 1.46a2 2 0 0 0 .73 2.73l.15.08a2 2 0 0 1 1 1.73v.44a2 2 0 0 1-1 1.73l-.15.08a2 2 0 0 0-.73 2.73l.78 1.46a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73v.18a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.78-1.46a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.73v-.44a2 2 0 0 1 1-1.73l.15-.08a2 2 0 0 0 .73-2.73l-.78-1.46a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>',
+            LogOut: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>',
+            ChevronRight: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
+            ChevronDown: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
+            Filter: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>',
+            Download: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>',
+            Calendar: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>',
+            Clock: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+            Search: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3)"/></svg>',
+            MoreHorizontal: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>',
+            CheckCircle: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>',
+            AlertCircle: '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>',
+            Plus: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>',
+            Save: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>',
+            Menu: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>',
+            X: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
+            Edit: '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+            Send: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>',
+            Sparkles: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.9 10.9v.8m5.4-3.6v.8m-4.6 2.8v.8m4.6-2.8v.8M12 21a9 9 0 0 1-9-9c0-2.3 1.1-4.4 3-5.7l1.4-1.2C9 3 10.5 2 12 2h0c1.5 0 3 1 4.6 2.1l1.4 1.2a9 9 0 0 1 3 5.7 9 9 0 0 1-9 9Z"/></svg>',
+            Loader: '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>',
+            CheckSolid: '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="currentColor" class="mb-4 text-emerald-100 fill-emerald-500/50 stroke-emerald-600"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path stroke="currentColor" fill="none" stroke-width="2" d="m9 11 3 3L22 4"/></svg>'
+        };
+
+        // --- Mock Data ---
+        const SUBJECTS = [
+            { id: 'sub1', name: 'Web Technology' },
+            { id: 'sub2', name: 'Internet of Things (IoT)' },
+            { id: 'sub3', name: 'Object Oriented Programming (OOP)' },
+        ];
+
+        const CLASSES = [
+            { id: 'c1', name: '3CSE01', advisor: 'Vivek Sharma', students: 60 },
+            { id: 'c2', name: '3CSE02', advisor: 'Jane Doe', students: 58 },
+            { id: 'c3', name: '3AIML01', advisor: 'Alan Turing', students: 62 },
+        ];
+
+        const STUDENTS_3CSE01 = [
+            { srn: '24SUUBECS0001', name: 'A MOHITH SANTOSH' },
+            { srn: '24SUUBECS0002', name: 'A P PRAJWAL GOWDA' },
+            { srn: '24SUUBECS0003', name: 'A ROHIT KUMAR' },
+            { srn: '24SUUBECS0006', name: 'AAJAY SURYAA' },
+            { srn: '24SUUBECS0045', name: 'ADARSH SHUKLA' },
+            { srn: '24SUUBECS0046', name: 'ADARSH V' },
+            { srn: '24SUUBELCS001', name: 'ABHISHEK N J' },
+            { srn: '24SUUBELCS002', name: 'ADARSH B H' },
+            { srn: '24SUUBELCS003', name: 'AKASH GOWDA S' },
+            { srn: '24SUUBELCS004', name: 'AKASH H' },
+            { srn: '24SUUBELCS005', name: 'AMRUTHA C N' },
+        ];
+
+        let teamsData = [
+            {
+                id: 101,
+                name: 'Team Alpha',
+                projectTitle: 'IoT Home Automation',
+                submissionDate: '2023-11-10T14:30:00',
+                members: [
+                    { name: 'A MOHITH SANTOSH', srn: '24SUUBECS0001', email: 'mohith@uni.edu' },
+                    { name: 'A P PRAJWAL GOWDA', srn: '24SUUBECS0002', email: 'prajwal@uni.edu' }
+                ],
+                marks: { presentation: 18, assignment: 9, ppt: 8, report: 15, project: 40 },
+                status: { presentation: true, assignment: true, ppt: true, report: true, project: true },
+                projectStatus: 'Completed'
+            },
+            {
+                id: 102,
+                name: 'Team Beta',
+                projectTitle: 'E-Commerce React App',
+                submissionDate: '2023-11-15T09:00:00',
+                members: [
+                    { name: 'ABHISHEK N J', srn: '24SUUBELCS001', email: 'abhishek@uni.edu' },
+                    { name: 'ADARSH B H', srn: '24SUUBELCS002', email: 'adarsh@uni.edu' }
+                ],
+                marks: { presentation: 15, assignment: 8, ppt: 0, report: 0, project: 0 },
+                status: { presentation: true, assignment: true, ppt: false, report: false, project: false },
+                projectStatus: 'Pending Report'
+            },
+        ];
+
+        let requestsData = [
+            {
+                id: 1,
+                teamName: 'Team Gamma',
+                title: 'Blockchain Voting System',
+                description: 'A secure, end-to-end electronic voting platform using blockchain to ensure immutability and transparency. Voters submit encrypted ballots which are recorded on a private blockchain; results are aggregated via smart contracts, preventing tampering and enabling verifiable audits.',
+                subject: 'Web Technology',
+                class: '3CSE01',
+                membersCount: 2,
+                members: [
+                    { name: 'AKASH GOWDA S', srn: '24SUUBELCS003' },
+                    { name: 'AKASH H', srn: '24SUUBELCS004' }
+                ]
+            },
+        ];
+
+        const MARKS_CONFIG_KEYS = ['presentation', 'assignment', 'ppt', 'report', 'project'];
+
+        // --- State Management (Simple reactive object) ---
+        const state = {
+            activeView: 'classes',
+            selectedSubject: null,
+            selectedClass: null,
+            viewMode: 'teams',
+            teams: teamsData,
+            requests: requestsData,
+            publishedProjects: [],
+            marksConfig: { presentation: 20, assignment: 10, ppt: 10, report: 20, project: 40 },
+            selectedTeam: null,
+            showMarksConfig: false,
+            showPublishModal: false,
+            deadline: new Date('2024-12-01'),
+            isAiLoading: false,
+            generatedFeedback: '',
+            // Milestone generator state
+            generatedMilestones: [],
+            milestoneCount: 4,
+            // Request details / duplicate check
+            selectedRequest: null,
+            requestDuplicates: [],
+            isCheckingDuplicates: false,
+            // Messaging
+            messages: JSON.parse(localStorage.getItem('projx_messages') || '[]'),
+            currentConversation: null,
+            newMessageText: '',
+            newMessageRecipient: null,
+            newProject: { title: '', type: 'Team', deadline: '', description: '', targetClass: '3CSE01' },
+            filterStatus: 'All',
+            sortBy: 'default',
+            studentSearch: '',
+        };
+
+        const appContainer = document.getElementById('app');
+
+        function updateState(newState, renderFunction = renderApp) {
+            Object.assign(state, newState);
+            renderFunction();
+        }
+
+        // --- Core Utilities ---
+
+        function calculateTotal(marks) {
+            return Object.values(marks).reduce((a, b) => a + b, 0);
+        }
+
+        function getMaxScore() {
+            return calculateTotal(state.marksConfig);
+        }
+
+        function getDaysRemaining() {
+            const now = new Date();
+            const dead = state.deadline;
+            const diffTime = dead.getTime() - now.getTime();
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
+
+        function getDeadlineStatus(submissionDate) {
+            if (!submissionDate) return { label: 'Not Submitted', color: 'text-slate-400 bg-slate-100' };
+            const submit = new Date(submissionDate);
+            const dead = state.deadline;
+
+            if (submit.toDateString() === dead.toDateString()) return { label: 'On Time', color: 'text-amber-600 bg-amber-50' };
+            if (submit.getTime() < dead.getTime()) return { label: 'Early', color: 'text-emerald-600 bg-emerald-50' };
+            return { label: 'Late Submission', color: 'text-rose-600 bg-rose-50' };
+        }
+
+        // --- UI Helpers ---
+        function showToast(message, type = 'info', duration = 3000) {
+            const colors = {
+                info: 'bg-slate-800 text-white',
+                success: 'bg-emerald-600 text-white',
+                error: 'bg-rose-600 text-white'
+            };
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-6 right-6 z-50 px-4 py-2 rounded-lg shadow-lg transition-all ${colors[type] || colors.info}`;
+            toast.style.opacity = '0';
+            toast.innerText = message;
+            document.body.appendChild(toast);
+            requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateY(0)'; });
+            setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateY(10px)'; setTimeout(() => toast.remove(), 300); }, duration);
+        }
+
+        // --- Messaging Helpers ---
+        function saveMessagesToStorage() {
+            try {
+                localStorage.setItem('projx_messages', JSON.stringify(state.messages || []));
+            } catch (e) { console.error('Error saving messages', e); }
+        }
+
+        function addMessage(message) {
+            state.messages = [...(state.messages || []), message];
+            saveMessagesToStorage();
+            showToast('Message sent', 'success');
+        }
+
+        function getCurrentUserInfo() {
+            const u = sessionStorage.getItem('currentUser');
+            if (!u) return { id: 'unknown', name: 'Unknown', role: 'guest' };
+            const parsed = JSON.parse(u);
+            // Determine role by presence of srn
+            return parsed.srn ? { id: parsed.srn, name: parsed.name, role: 'student' } : { id: parsed.email || parsed.uid || 'teacher', name: parsed.name || parsed.email, role: 'teacher' };
+        }
+
+        function findStudentBySrn(srn) {
+            return STUDENTS_3CSE01.find(s => s.srn === srn) || null;
+        }
+
+        function getConversationsForCurrentUser() {
+            const user = getCurrentUserInfo();
+            const others = {};
+            (state.messages || []).forEach(m => {
+                let counterpart = null;
+                if (m.from.id === user.id) counterpart = m.to;
+                else if (m.to.id === user.id) counterpart = m.from;
+                if (counterpart) {
+                    others[counterpart.id] = { participant: counterpart, lastMessage: m, count: (others[counterpart.id]?.count || 0) + 1 };
+                }
+            });
+            return Object.values(others).sort((a,b) => new Date(b.lastMessage.timestamp) - new Date(a.lastMessage.timestamp));
+        }
+
+        function openConversationWithStudent(srn) {
+            const student = findStudentBySrn(srn) || { id: srn, name: srn };
+            const participant = { id: student.srn || student.id, name: student.name || student.id, role: 'student' };
+            state.currentConversation = participant;
+            renderConversationModal();
+        }
+
+        function renderConversationModal() {
+            removeModal('conversation-modal');
+            if (!state.currentConversation) return;
+            const user = getCurrentUserInfo();
+            const p = state.currentConversation;
+            const msgs = (state.messages || []).filter(m => (m.from.id === user.id && m.to.id === p.id) || (m.from.id === p.id && m.to.id === user.id)).sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+            const messagesHtml = msgs.map(m => `
+                <div class="p-2 ${m.from.id === user.id ? 'text-right' : 'text-left'}">
+                    <div class="inline-block ${m.from.id === user.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'} px-3 py-2 rounded-md text-sm">${m.content}</div>
+                    <div class="text-xs text-slate-400 mt-1">${new Date(m.timestamp).toLocaleString()}</div>
+                </div>
+            `).join('');
+
+            const content = `
+                <div class="space-y-4">
+                    <div>
+                        <h4 class="text-lg font-bold">Conversation with ${p.name}</h4>
+                    </div>
+                    <div class="max-h-[320px] overflow-y-auto p-3 bg-white border rounded">${messagesHtml || '<div class="text-xs text-slate-400">No messages yet.</div>'}</div>
+                    <div class="flex gap-2">
+                        <input id="message-input" type="text" placeholder="Type message..." class="flex-1 border rounded px-3 py-2 text-sm" />
+                        <button onclick="(function(){ const val=document.getElementById('message-input').value.trim(); if(!val){showToast('Message empty','error');return;} const userInfo=getCurrentUserInfo(); addMessage({ id: Date.now(), from: userInfo, to: { id: '${p.id}', name: '${p.name}', role: 'student'}, content: val, timestamp: new Date().toISOString() }); renderConversationModal(); document.getElementById('message-input').value=''; })()" class="px-4 py-2 bg-indigo-600 text-white rounded">Send</button>
+                    </div>
+                    <div class="flex justify-end pt-2">
+                        <button onclick="removeModal('conversation-modal'); state.currentConversation=null;" class="px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors">Close</button>
+                    </div>
+                </div>
+            `;
+
+            renderModal(`Chat — ${p.name}`, content, `removeModal('conversation-modal')`, 'max-w-xl', 'conversation-modal');
+        }
+
+        function getStudentTeamInfo(srn) {
+            const team = state.teams.find(t => t.members.some(m => m.srn === srn));
+            return team ? { name: team.name, id: team.id } : null;
+        }
+
+        // --- Handlers ---
+
+        function setActiveView(view) {
+            updateState({ activeView: view });
+        }
+
+        function selectSubject(sub) {
+            updateState({ selectedSubject: sub });
+        }
+
+        function selectClass(cls) {
+            updateState({ activeView: 'dashboard', selectedClass: cls, selectedSubject: SUBJECTS[0] });
+        }
+
+        function clearSelection() {
+            updateState({ selectedClass: null, selectedSubject: null });
+        }
+
+        function setViewMode(mode) {
+            updateState({ viewMode: mode });
+        }
+
+        function setFilterStatus(status) {
+            updateState({ filterStatus: status });
+        }
+
+        function setSortBy(sort) {
+            updateState({ sortBy: sort });
+        }
+
+        function setStudentSearch(value) {
+            updateState({ studentSearch: value }, renderStudentsList); // Only re-render list, not full app
+        }
+
+        function handleMarkChange(teamId, field, target) {
+            const max = state.marksConfig[field];
+            const value = target.value;
+            const numValue = Math.min(Math.max(0, parseInt(value) || 0), max);
+
+            const newTeams = state.teams.map(team => {
+                if (team.id === teamId) {
+                    return {
+                        ...team,
+                        marks: { ...team.marks, [field]: numValue },
+                        status: { ...team.status, [field]: true }
+                    };
+                }
+                return team;
+            });
+            updateState({ teams: newTeams });
+        }
+
+        function handleCheckToggle(teamId, field) {
+            const newTeams = state.teams.map(team => {
+                if (team.id === teamId) {
+                    const newStatus = !team.status[field];
+                    return {
+                        ...team,
+                        status: { ...team.status, [field]: newStatus },
+                    };
+                }
+                return team;
+            });
+            updateState({ teams: newTeams });
+        }
+
+        function setMarksConfigValue(key, target) {
+            const numValue = parseInt(target.value) || 0;
+            updateState({ marksConfig: { ...state.marksConfig, [key]: numValue } });
+        }
+
+        function setDeadline(target) {
+            const value = target.value;
+            if (value) {
+                updateState({ deadline: new Date(value) });
+            }
+        }
+
+        function updateNewProject(key, target) {
+            const value = target.value;
+            state.newProject = { ...state.newProject, [key]: value };
+        }
+
+        function showModal(modalName, team = null) {
+            if (modalName === 'config') updateState({ showMarksConfig: true });
+            if (modalName === 'publish') updateState({ showPublishModal: true });
+            if (modalName === 'teamDetails') updateState({ selectedTeam: team, generatedFeedback: '', generatedMilestones: [], milestoneCount: 4 });
+        }
+
+        function closeModal(modalName) {
+            if (modalName === 'config') updateState({ showMarksConfig: false });
+            if (modalName === 'publish') updateState({ showPublishModal: false, newProject: { title: '', type: 'Team', deadline: '', description: '', targetClass: '3CSE01' } });
+            if (modalName === 'teamDetails') updateState({ selectedTeam: null, generatedFeedback: '', generatedMilestones: [] });
+        }
+
+        function handleLogout() {
+            if (confirm('Are you sure you want to logout?')) {
+                sessionStorage.removeItem('currentUser');
+                // Use replace to avoid leaving a history entry (prevents back button returning to protected page)
+                window.location.replace('index.html');
+            }
+        }
+
+        function handlePublishProject() {
+            const project = state.newProject;
+            if (!project.title || !project.deadline) return;
+
+            const published = { ...project, id: Date.now() };
+            updateState({
+                publishedProjects: [...state.publishedProjects, published],
+                deadline: new Date(project.deadline),
+                showPublishModal: false,
+                newProject: { title: '', type: 'Team', deadline: '', description: '', targetClass: '3CSE01' }
+            });
+        }
+
+        function handleRequestAction(id, action) {
+            const request = state.requests.find(r => r.id === id);
+            const newRequests = state.requests.filter(req => req.id !== id);
+            updateState({ requests: newRequests });
+
+            if (action === 'reject') {
+                showToast('Request rejected.', 'info');
+            }
+
+            if (action === 'approve' && request) {
+                const duplicateMembers = request.members.filter(m => getStudentTeamInfo(m.srn));
+
+                if (duplicateMembers.length > 0) {
+                    // Re-add request if validation fails (mock UI logic)
+                    updateState({ requests: [...newRequests, request] });
+                    showToast(`Cannot approve. ${duplicateMembers.map(m => m.name).join(', ')} are already in a team.`, 'error');
+                    return;
+                }
+
+                const newTeam = {
+                    id: Date.now(),
+                    name: request.teamName,
+                    projectTitle: request.title,
+                    description: request.description || '',
+                    submissionDate: null,
+                    members: request.members.map(m => ({ ...m, email: `${m.srn.toLowerCase()}@uni.edu` })),
+                    marks: { presentation: 0, assignment: 0, ppt: 0, report: 0, project: 0 },
+                    status: { presentation: false, assignment: false, ppt: false, report: false, project: false },
+                    projectStatus: 'Pending Presentation'
+                };
+                updateState({ teams: [...state.teams, newTeam] });
+                showToast('Request approved and team created.', 'success');
+            }
+        }
+
+        // --- Gemini AI Integration ---
+
+        async function callGemini(prompt) {
+            const apiKey = "AIzaSyB3fARHsKcLO-z1lpxnHVwuc-LaXXDmde0";
+            if (!apiKey) {
+                alert("Please add a Gemini API Key in the code (const apiKey = '...') to use AI features!");
+                return "API Key Missing in Code.";
+            }
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            const payload = { contents: [{ parts: [{ text: prompt }] }] };
+
+            let attempts = 0;
+            const maxAttempts = 5;
+
+            while (attempts < maxAttempts) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        if (response.status === 429 && attempts < maxAttempts - 1) {
+                            const delay = Math.pow(2, attempts) * 1000;
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            attempts++;
+                            continue;
+                        }
+                        throw new Error(`Gemini API Error: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "Could not generate content.";
+
+                } catch (error) {
+                    console.error("Gemini Error:", error);
+                    return "Error connecting to AI service.";
+                }
+            }
+            return "Error: Maximum retry attempts reached.";
+        }
+
+        async function handleAiGenerateDescription() {
+            const title = state.newProject.title;
+            if (!title) {
+                alert("Please enter a project title first.");
+                return;
+            }
+            updateState({ isAiLoading: true });
+            const subjectName = state.selectedSubject?.name || 'Computer Science';
+            const prompt = `You are a professor. Create a concise, professional project description (max 60 words) and 3 key technical requirements for a university course project on "${subjectName}" titled "${title}".`;
+
+            const text = await callGemini(prompt);
+            state.newProject = { ...state.newProject, description: text };
+            updateState({ isAiLoading: false }, renderPublishModal);
+        }
+
+        async function handleAiGenerateFeedback(team) {
+            updateState({ generatedFeedback: '', isAiLoading: true });
+
+            const marks = team.marks;
+            const config = state.marksConfig;
+            const total = calculateTotal(marks);
+            const max = calculateTotal(config);
+
+            const prompt = `You are a strict but fair university professor. Generate a concise, constructive feedback summary (max 2 sentences) for a student team named "${team.name}" working on "${team.projectTitle}".
+            Their scores: Presentation: ${marks.presentation}/${config.presentation}, Assignment: ${marks.assignment}/${config.assignment}, Total: ${total}/${max}.
+            If scores are low (<60% of max), suggest specific improvements (e.g., 'focus on data validation'). If high (>85%), congratulate them specifically on their strong points.`;
+
+            const text = await callGemini(prompt);
+            updateState({ generatedFeedback: text, isAiLoading: false }, renderTeamDetailsModal);
+        }
+
+        // --- Milestone Generator (AI) ---
+        async function callGeminiWithKey(apiKey, prompt) {
+            if (!apiKey) {
+                alert('Please add an API Key to use AI milestones!');
+                return "API Key Missing in Code.";
+            }
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const payload = { contents: [{ parts: [{ text: prompt }] }] };
+
+            try {
+                const resp = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!resp.ok) throw new Error(`AI Error: ${resp.statusText}`);
+                const data = await resp.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || "Could not generate content.";
+            } catch (err) {
+                console.error('callGeminiWithKey error:', err);
+                return 'Error connecting to AI service.';
+            }
+        }
+
+        function parseJsonFromText(text) {
+            // Try direct parse, then fallback to extracting JSON array
+            try { return JSON.parse(text); } catch (e) {}
+            const match = text.match(/(\[\s*\{[\s\S]*\}\s*\])/m);
+            if (match) {
+                try { return JSON.parse(match[1]); } catch (e) { return null; }
+            }
+            return null;
+        }
+
+        async function handleAiGenerateMilestones(team, count) {
+            const apiKey = "AIzaSyAo1b3edSDlG8vZqCgCZ0xxnPoEGgbPPWo"; // Provided by teacher
+            if (!team || !team.projectTitle) {
+                showToast('No team or project title available.', 'error');
+                return;
+            }
+            updateState({ generatedMilestones: [], isAiLoading: true });
+
+            const prompt = `You are a project advisor. Break the project titled "${team.projectTitle}" into ${count} clear, manageable milestones. For each milestone provide: a short title, a one-sentence objective, and an estimated duration in days. Return the result as a JSON array of objects with fields: title, objective, durationDays.`;
+
+            const text = await callGeminiWithKey(apiKey, prompt);
+
+            let parsed = parseJsonFromText(text);
+
+            // If not parsed, try a simpler parsing heuristic
+            if (!parsed) {
+                // Attempt to split lines and create simple milestones
+                const lines = text.split(/\r?\n/).filter(Boolean).slice(0, count);
+                parsed = lines.map((l, i) => ({ title: `Milestone ${i+1}`, objective: l.slice(0, 200), durationDays: 7 }));
+            }
+
+            updateState({ generatedMilestones: parsed || [], isAiLoading: false }, renderTeamDetailsModal);
+        }
+
+        function handleSaveMilestones(teamId) {
+            const milestones = state.generatedMilestones || [];
+            if (!milestones.length) {
+                showToast('No generated milestones to save.', 'error');
+                return;
+            }
+
+            const newTeams = state.teams.map(t => {
+                if (t.id === teamId) {
+                    return { ...t, milestones };
+                }
+                return t;
+            });
+
+            updateState({ teams: newTeams, generatedMilestones: [] }, renderTeamDetailsModal);
+            showToast('Milestones saved to team successfully.', 'success');
+        }
+
+        // --- Request Details & Duplicate Checking ---
+        function showRequestDetails(req) {
+            try {
+                if (typeof req === 'string') req = JSON.parse(req);
+            } catch (e) { /* ignore */ }
+            updateState({ selectedRequest: req, requestDuplicates: [], isCheckingDuplicates: false }, renderRequestDetailsModal);
+        }
+
+        function closeRequestDetails() {
+            updateState({ selectedRequest: null, requestDuplicates: [], isCheckingDuplicates: false });
+            removeModal('request-details-modal');
+        }
+
+        function findDuplicateProjects(title) {
+            if (!title) return [];
+            const normalize = s => (s || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+            const aTokens = new Set(normalize(title).split(/\s+/).filter(Boolean));
+
+            const results = state.teams.map(team => {
+                const teamTitle = normalize(team.projectTitle || '');
+                if (!teamTitle) return null;
+                if (teamTitle === normalize(title)) return { team, score: 1.0, reason: 'Exact match' };
+                const bTokens = new Set(teamTitle.split(/\s+/).filter(Boolean));
+                const intersection = [...aTokens].filter(x => bTokens.has(x)).length;
+                const overlap = intersection / Math.min(aTokens.size || 1, bTokens.size || 1);
+                return overlap > 0 ? { team, score: overlap, reason: `Overlap ${Math.round(overlap*100)}%` } : null;
+            }).filter(Boolean).filter(r => r.score >= 0.4).sort((a,b) => b.score - a.score);
+
+            return results;
+        }
+
+        async function handleCheckDuplicates() {
+            if (!state.selectedRequest) { showToast('No request selected', 'error'); return; }
+            updateState({ isCheckingDuplicates: true, requestDuplicates: [] });
+
+            // Quick client-side check
+            const results = findDuplicateProjects(state.selectedRequest.title || '');
+            updateState({ requestDuplicates: results, isCheckingDuplicates: false }, renderRequestDetailsModal);
+
+            if (!results.length) showToast('No duplicates found', 'info'); else showToast(`Found ${results.length} potential duplicate(s)`, 'info');
+        }
+
+        function renderRequestDetailsModal() {
+            removeModal('request-details-modal');
+            if (!state.selectedRequest) return;
+            const req = state.selectedRequest;
+            const membersHtml = req.members.map(m => `
+                <tr class="bg-white"><td class="p-3 font-medium text-slate-800">${m.name}</td><td class="p-3 text-slate-600 font-mono">${m.srn}</td></tr>
+            `).join('');
+
+            const duplicatesHtml = (state.requestDuplicates || []).length > 0 ? (state.requestDuplicates || []).map(r => `
+                <div class="p-2 bg-slate-50 rounded border">
+                    <div class="text-sm font-semibold">${r.team.name} — ${r.team.projectTitle}</div>
+                    <div class="text-xs text-slate-500">${r.reason} (${Math.round(r.score*100)}%)</div>
+                </div>
+            `).join('') : `<div class="text-xs text-slate-500">No duplicates found.</div>`;
+
+            const content = `
+                <div class="space-y-6">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-slate-50 p-3 rounded-lg">
+                            <span class="text-xs text-slate-500 uppercase font-bold block mb-1">Team Name</span>
+                            <span class="text-slate-800 font-medium">${req.teamName}</span>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-lg">
+                            <span class="text-xs text-slate-500 uppercase font-bold block mb-1">Proposed Title</span>
+                            <span class="text-slate-800 font-medium">${req.title}</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-700 mb-3">Team Members</h4>
+                        <div class="border rounded-lg overflow-hidden">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-slate-100 text-slate-600 font-semibold">
+                                    <tr><th class="p-3">Name</th><th class="p-3">SRN</th></tr>
+                                </thead>
+                                <tbody class="divide-y">${membersHtml}</tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-700 mb-3">Project Description</h4>
+                        <div class="p-3 bg-slate-50 rounded border text-sm text-slate-700">
+                            ${req.description ? req.description : '<span class="text-slate-400">No description provided.</span>'}
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-t border-slate-100">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="text-sm font-bold text-slate-700">Duplicate Project Check</div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="handleCheckDuplicates()" class="px-3 py-1.5 bg-indigo-600 text-white rounded-md text-sm">${Icons.Search} Check Duplicates</button>
+                                <button onclick="handleRequestAction(${req.id}, 'approve'); closeRequestDetails();" class="px-3 py-1.5 bg-emerald-600 text-white rounded-md text-sm">Approve</button>
+                                <button onclick="handleRequestAction(${req.id}, 'reject'); closeRequestDetails();" class="px-3 py-1.5 bg-rose-600 text-white rounded-md text-sm">Reject</button>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">${duplicatesHtml}</div>
+                    </div>
+
+                    <div class="flex justify-end pt-2">
+                        <button onclick="closeRequestDetails()" class="px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors">Close</button>
+                    </div>
+                </div>
+            `;
+
+            renderModal(`${req.teamName} Request`, content, `closeRequestDetails()`, 'max-w-2xl', 'request-details-modal');
+        }
+
+        // --- Rendering Functions ---
+
+        function getSidebarClass(view) {
+            const isActive = state.activeView === view;
+            return `w-full flex items-center justify-between px-4 py-3 mb-1 rounded-lg transition-colors ${
+                isActive
+                    ? 'bg-indigo-50 text-indigo-700 font-medium'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+            }`;
+        }
+
+        function renderSidebar() {
+            const currentUser = JSON.parse(sessionStorage.getItem('currentUser')) || {};
+            const teacherName = currentUser.name || 'Prof. Anderson';
+            
+            return `
+                <aside class="w-64 bg-white border-r border-slate-200 flex flex-col hidden md:flex shadow-xl z-20">
+                    <div class="p-6 border-b border-slate-100 flex items-center gap-2">
+                        <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-200">X</div>
+                        <span class="font-extrabold text-xl tracking-tight text-slate-800">ProjX <span class="text-indigo-600">Monitor</span></span>
+                    </div>
+
+                    <nav class="flex-1 p-4 overflow-y-auto">
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-2 mt-2">Main Menu</div>
+                        <button onclick="setActiveView('dashboard')" class="${getSidebarClass('dashboard')}">
+                            <div class="flex items-center gap-3">${Icons.Dashboard}<span>Dashboard</span></div>
+                        </button>
+                        <button onclick="setActiveView('requests')" class="${getSidebarClass('requests')}">
+                            <div class="flex items-center gap-3">${Icons.FileText}<span>Project Requests</span></div>
+                            ${state.requests.length > 0 ? `<span class="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">${state.requests.length}</span>` : ''}
+                        </button>
+                        <button onclick="setActiveView('students')" class="${getSidebarClass('students')}">
+                            <div class="flex items-center gap-3">${Icons.Users}<span>Students</span></div>
+                        </button>
+                        <button onclick="setActiveView('messages')" class="${getSidebarClass('messages')}">
+                            <div class="flex items-center gap-3">${Icons.Send}<span>Messages</span></div>
+                        </button>
+                        <button onclick="setActiveView('classes')" class="${getSidebarClass('classes')}">
+                            <div class="flex items-center gap-3">${Icons.BookOpen}<span>Classes</span></div>
+                        </button>
+
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-2 mt-6">System</div>
+                        <button onclick="console.log('Settings clicked')" class="${getSidebarClass('settings')}">
+                            <div class="flex items-center gap-3">${Icons.Settings}<span>Settings</span></div>
+                        </button>
+                        <button onclick="handleLogout()" class="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50">
+                            ${Icons.LogOut} <span>Logout</span>
+                        </button>
+                    </nav>
+
+                    <div class="p-4 border-t border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-violet-500 to-indigo-500 border-2 border-white shadow-sm"></div>
+                            <div class="overflow-hidden">
+                                <p class="text-sm font-bold text-slate-800 truncate">${teacherName}</p>
+                                <p class="text-xs text-slate-500 truncate">Admin Access</p>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+            `;
+        }
+
+        function renderSelectionScreen() {
+            const subjectItems = SUBJECTS.map(sub => {
+                const isSelected = state.selectedSubject?.id === sub.id;
+                return `
+                    <button
+                        onclick="selectSubject({id: '${sub.id}', name: '${sub.name}'})"
+                        class="w-full p-4 rounded-xl border text-left transition-all flex justify-between items-center ${isSelected ? 'border-indigo-500 bg-indigo-50 shadow-md ring-1 ring-indigo-500' : 'border-slate-200 bg-white hover:border-indigo-300'}"
+                    >
+                        <span class="font-medium ${isSelected ? 'text-indigo-700' : 'text-slate-700'}">${sub.name}</span>
+                        ${isSelected ? Icons.CheckCircle : ''}
+                    </button>
+                `;
+            }).join('');
+
+            const classItems = CLASSES.map(cls => {
+                const isSelected = state.selectedClass?.id === cls.id;
+                const isDisabled = !state.selectedSubject;
+                return `
+                    <button
+                        onclick="selectClass({id: '${cls.id}', name: '${cls.name}', advisor: '${cls.advisor}', students: ${cls.students}})"
+                        ${isDisabled ? 'disabled' : ''}
+                        class="w-full p-4 rounded-xl border text-left transition-all flex justify-between items-center ${isSelected ? 'border-violet-500 bg-violet-50 shadow-md ring-1 ring-violet-500' : 'border-slate-200 bg-white hover:border-violet-300'} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}"
+                    >
+                        <span class="font-medium ${isSelected ? 'text-violet-700' : 'text-slate-700'}">${cls.name}</span>
+                        ${isSelected ? Icons.CheckCircle.replace('text-indigo', 'text-violet') : ''}
+                    </button>
+                `;
+            }).join('');
+
+            return `
+                <div class="flex flex-col items-center justify-center h-full p-8 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div class="bg-indigo-100 p-4 rounded-full mb-6 text-indigo-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-800 mb-2">Select Subject & Class</h2>
+                    <p class="text-slate-500 mb-8 max-w-md">Please select the academic subject and the specific section you wish to manage marks for.</p>
+
+                    <div class="grid md:grid-cols-2 gap-6 w-full max-w-2xl">
+                        <div class="space-y-3 text-left">
+                            <label class="text-sm font-semibold text-slate-600 uppercase tracking-wider">Subject</label>
+                            <div class="space-y-2">${subjectItems}</div>
+                        </div>
+                        <div class="space-y-3 text-left">
+                            <label class="text-sm font-semibold text-slate-600 uppercase tracking-wider">Class Section</label>
+                            <div class="space-y-2">${classItems}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTeamsTable() {
+            let teams = [...state.teams];
+
+            // Filter Logic
+            if (state.filterStatus !== 'All') {
+                if (state.filterStatus === 'Completed') teams = teams.filter(t => t.projectStatus === 'Completed');
+                else if (state.filterStatus === 'Pending') teams = teams.filter(t => t.projectStatus.includes('Pending'));
+                else if (state.filterStatus === 'Late') {
+                    teams = teams.filter(t => getDeadlineStatus(t.submissionDate).label === 'Late Submission');
+                }
+            }
+
+            // Sort Logic
+            if (state.sortBy === 'marksHigh') {
+                teams.sort((a, b) => calculateTotal(b.marks) - calculateTotal(a.marks));
+            } else if (state.sortBy === 'submissionEarly') {
+                teams.sort((a, b) => new Date(a.submissionDate || '2099-01-01').getTime() - new Date(b.submissionDate || '2099-01-01').getTime());
+            }
+
+            const maxScore = getMaxScore();
+
+            const teamRows = teams.map(team => {
+                const deadlineInfo = getDeadlineStatus(team.submissionDate);
+                const totalScore = calculateTotal(team.marks);
+                const isHighScore = totalScore > (maxScore * 0.7);
+
+                const markColumns = MARKS_CONFIG_KEYS.map(field => {
+                    const score = team.marks[field];
+                    const isChecked = team.status[field];
+                    const max = state.marksConfig[field];
+                    const inputClass = `w-full text-center text-sm p-1 rounded border outline-none focus:ring-2 focus:ring-indigo-200 transition-all ${
+                        score > 0 ? 'border-indigo-300 bg-indigo-50 font-semibold text-indigo-700' : 'border-slate-200 bg-white text-slate-400'
+                    }`;
+
+                    return `
+                        <td class="p-4 text-center">
+                            <div class="flex flex-col items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    ${isChecked ? 'checked' : ''}
+                                    onchange="handleCheckToggle(${team.id}, '${field}')"
+                                    class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
+                                />
+                                <div class="relative w-16">
+                                    <input
+                                        type="number"
+                                        value="${score}"
+                                        onchange="handleMarkChange(${team.id}, '${field}', this)"
+                                        class="${inputClass}"
+                                        min="0"
+                                        max="${max}"
+                                    />
+                                </div>
+                            </div>
+                        </td>
+                    `;
+                }).join('');
+
+                return `
+                    <tr class="hover:bg-slate-50/80 group transition-colors">
+                        <!-- Team Info Column (Sticky) -->
+                        <td class="p-4 sticky-col bg-white group-hover:bg-slate-50/80 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                            <div class="flex flex-col gap-1">
+                                <span class="font-bold text-slate-800">${team.name}</span>
+                                <span class="text-xs text-slate-500 truncate max-w-[160px]">${team.projectTitle}</span>
+                                <button
+                                    onclick="showModal('teamDetails', ${JSON.stringify(team).replace(/"/g, '&quot;')})"
+                                    class="text-indigo-600 text-xs font-medium mt-1 hover:underline flex items-center gap-1 w-fit"
+                                >
+                                    View Details
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                </button>
+                            </div>
+                        </td>
+
+                        <!-- Dynamic Marks Columns -->
+                        ${markColumns}
+
+                        <!-- Total -->
+                        <td class="p-4 text-center">
+                            <div class="flex items-center justify-center">
+                                <span class="text-base font-bold ${isHighScore ? 'text-emerald-600' : 'text-slate-700'}">
+                                    ${totalScore}
+                                </span>
+                                <span class="text-xs text-slate-400">/${maxScore}</span>
+                            </div>
+                        </td>
+
+                        <!-- Deadline Badge -->
+                        <td class="p-4">
+                            <div class="flex flex-col items-center gap-1">
+                                <span class="px-2 py-1 rounded-md text-xs font-bold border ${deadlineInfo.color} border-transparent">
+                                    ${deadlineInfo.label}
+                                </span>
+                                <span class="text-[10px] text-slate-400 font-mono">
+                                    ${team.submissionDate ? new Date(team.submissionDate).toLocaleDateString() : '--/--'}
+                                </span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            return `
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold">
+                                    <th class="p-4 w-48 sticky-col bg-slate-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Team / Details</th>
+                                    ${MARKS_CONFIG_KEYS.map(k => `<th class="p-4 text-center w-32">${k.charAt(0).toUpperCase() + k.slice(1).slice(0, 5)}. (${state.marksConfig[k]})</th>`).join('')}
+                                    <th class="p-4 text-center w-24">Total</th>
+                                    <th class="p-4 text-center w-32">Deadline Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${teamRows}
+                            </tbody>
+                        </table>
+                    </div>
+                    ${teams.length === 0 ? `
+                        <div class="p-12 text-center text-slate-400">
+                            ${Icons.Search.replace('width="14" height="14"', 'width="48" height="48"').replace('class=""', 'class="mx-auto mb-3 opacity-20"')}
+                            <p>No teams found matching current filters.</p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function renderMessagesView() {
+            const container = document.getElementById('main-content-area');
+            if (!container) return;
+
+            const convos = getConversationsForCurrentUser();
+            const convosHtml = convos.length === 0 ? `<div class="p-12 text-center text-slate-400">No conversations yet. Use "New Message" to start.</div>` : convos.map(c => `
+                <div class="p-3 rounded hover:bg-slate-50 cursor-pointer" onclick="(function(){ state.currentConversation = ${JSON.stringify({}).replace(/"/g,'&quot;')}; state.currentConversation = ${JSON.stringify(c.participant).replace(/"/g,'&quot;')}; renderConversationModal(); })()">
+                    <div class="text-sm font-semibold text-slate-800">${'${c.participant.name}'}</div>
+                    <div class="text-xs text-slate-500">${'${c.lastMessage.content ? c.lastMessage.content.slice(0,80) : ""}'}</div>
+                </div>
+            `).join('');
+
+            const studentsOptions = STUDENTS_3CSE01.map(s => `<option value="${s.srn}">${s.name} (${s.srn})</option>`).join('');
+
+            const html = `
+                <div class="grid grid-cols-3 gap-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                    <div class="col-span-1 bg-white rounded-xl shadow-sm border p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="text-sm font-bold text-slate-700">Conversations</div>
+                            <button onclick="state.currentConversation=null; renderComposeModal();" class="text-xs px-2 py-1 bg-indigo-50 text-indigo-700 rounded">New</button>
+                        </div>
+                        <div class="space-y-2">
+                            ${convosHtml}
+                        </div>
+                    </div>
+                    <div class="col-span-2 bg-white rounded-xl shadow-sm border p-6">
+                        <div class="text-slate-500">Select a conversation from the left, or click <strong>New</strong> to compose a message to a student.</div>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        function renderComposeModal() {
+            removeModal('compose-modal');
+            const studentsOptions = STUDENTS_3CSE01.map(s => `<option value="${s.srn}">${s.name} (${s.srn})</option>`).join('');
+            const content = `
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-xs text-slate-500">To (Student)</label>
+                        <select id="compose-recipient" class="w-full border rounded p-2 text-sm">${studentsOptions}</select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-500">Message</label>
+                        <textarea id="compose-text" class="w-full border rounded p-2 text-sm" rows="4"></textarea>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button onclick="removeModal('compose-modal')" class="px-4 py-2 bg-slate-100 rounded">Cancel</button>
+                        <button onclick="(function(){ const to=document.getElementById('compose-recipient').value; const txt=document.getElementById('compose-text').value.trim(); if(!txt){ showToast('Message cannot be empty','error'); return; } const user=getCurrentUserInfo(); addMessage({ id: Date.now(), from: user, to: { id: to, name: (findStudentBySrn(to)||{}).name || to, role: 'student' }, content: txt, timestamp: new Date().toISOString() }); removeModal('compose-modal'); renderMessagesView(); })()" class="px-4 py-2 bg-indigo-600 text-white rounded">Send</button>
+                    </div>
+                </div>
+            `;
+            renderModal('New Message', content, `removeModal('compose-modal')`, 'max-w-md', 'compose-modal');
+        }
+
+        function renderStudentsList() {
+            const container = document.getElementById('main-content-area');
+            if (!container) return;
+
+            const filteredStudents = STUDENTS_3CSE01.filter(s =>
+                s.name.toLowerCase().includes(state.studentSearch.toLowerCase()) ||
+                s.srn.toLowerCase().includes(state.studentSearch.toLowerCase())
+            );
+
+            const studentRows = filteredStudents.map(student => {
+                const teamInfo = getStudentTeamInfo(student.srn);
+                const isUnassigned = !teamInfo;
+                const rowClass = isUnassigned ? 'bg-red-50/30' : '';
+
+                return `
+                    <tr class="hover:bg-slate-50 ${rowClass}">
+                        <td class="p-3 font-mono text-slate-600 text-xs">${student.srn}</td>
+                        <td class="p-3 font-medium text-slate-800">${student.name}</td>
+                        <td class="p-3">
+                            ${teamInfo ? `
+                                <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                    ${Icons.Users.replace('width="20" height="20"', 'width="12" height="12"')} ${teamInfo.name}
+                                </span>
+                            ` : `
+                                <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                                    ${Icons.AlertCircle} Not Assigned
+                                </span>
+                            `}
+                        </td>
+                        <td class="p-3 text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                <button onclick="openConversationWithStudent('${student.srn}')" class="px-3 py-1.5 text-sm bg-indigo-50 text-indigo-700 rounded-md border border-indigo-100 hover:bg-indigo-100">Message</button>
+                                <button class="text-slate-400 hover:text-indigo-600 transition-colors p-1 rounded hover:bg-slate-200">${Icons.MoreHorizontal}</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            const html = `
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 flex-1 overflow-hidden flex flex-col h-[600px]">
+                    <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                        <h3 class="font-semibold text-slate-700">Class Roster: 3CSE01</h3>
+                        <div class="relative">
+                            ${Icons.Search.replace('width="14" height="14"', 'width="14" height="14"').replace('class=""', 'class="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400"')}
+                            <input
+                                type="text"
+                                placeholder="Find student..."
+                                class="pl-8 pr-3 py-1 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-indigo-200 w-64"
+                                value="${state.studentSearch}"
+                                oninput="setStudentSearch(this.value)"
+                            />
+                        </div>
+                    </div>
+                    <div class="overflow-y-auto flex-1">
+                        <table class="w-full text-left">
+                            <thead class="bg-white border-b border-slate-200 text-xs uppercase font-semibold text-slate-500 sticky top-0 z-10">
+                            <tr>
+                                <th class="p-3 bg-slate-50">SRN</th>
+                                <th class="p-3 bg-slate-50">Student Name</th>
+                                <th class="p-3 bg-slate-50">Team Status</th>
+                                <th class="p-3 bg-slate-50 text-right">Action</th>
+                            </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 text-sm">
+                                ${studentRows}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            if (state.activeView === 'students') {
+                 container.innerHTML = `<div class="animate-in fade-in slide-in-from-right-4 duration-500"><h2 class="text-2xl font-bold text-slate-800 mb-6">Student Roster</h2>${html}</div>`;
+            } else if (state.activeView === 'dashboard' && state.viewMode === 'students') {
+                document.getElementById('dashboard-table-area').innerHTML = html;
+            }
+        }
+
+
+        function renderDashboard() {
+            const container = document.getElementById('main-content-area');
+            if (!container) return; // FIX: Ensure container is defined
+
+            const daysRemaining = getDaysRemaining();
+            const submittedTeamsCount = state.teams.filter(t => t.submissionDate).length;
+
+            const publishedProjectsHtml = state.publishedProjects.length > 0 ? `
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex items-center gap-2 text-slate-800 font-bold mb-4">
+                        ${Icons.FileText.replace('width="20" height="20"', 'width="20" height="20"').replace('stroke="currentColor"', 'stroke="currentColor" class="text-indigo-500"')}
+                        <h3>Published Projects</h3>
+                    </div>
+                    <div class="space-y-3">
+                        ${state.publishedProjects.map(p => `
+                            <div class="bg-slate-50 p-3 rounded border border-slate-100">
+                                <div class="font-semibold text-sm text-slate-800">${p.title}</div>
+                                <div class="flex justify-between mt-1 text-xs text-slate-500">
+                                    <span>${p.type}</span>
+                                    <span>Due: ${new Date(p.deadline).toLocaleDateString()}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : '';
+
+            const dashboardContent = `
+                <div class="space-y-6 animate-in fade-in duration-500">
+                    <!-- Top Controls -->
+                    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center bg-white p-5 rounded-xl shadow-sm border border-slate-100 gap-4">
+                        <div>
+                            <!-- Breadcrumb Navigation -->
+                            <div class="flex items-center gap-2 text-sm text-slate-500 mb-1">
+                                <button onclick="clearSelection()" class="font-medium text-indigo-600 hover:underline hover:text-indigo-800 transition-colors">
+                                    ${state.selectedSubject.name}
+                                </button>
+                                ${Icons.ChevronRight.replace('width="14" height="14"', 'width="14" height="14"')}
+                                <button onclick="updateState({selectedClass: null})" class="font-medium text-violet-600 hover:underline hover:text-violet-800 transition-colors">
+                                    ${state.selectedClass.name}
+                                </button>
+                                <button onclick="clearSelection()" class="ml-2 text-xs bg-slate-100 hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 px-2 py-0.5 rounded border border-slate-200 transition-colors flex items-center gap-1" title="Switch Subject or Class">
+                                    ${Icons.Edit} Change
+                                </button>
+                            </div>
+                            <h1 class="text-2xl font-bold text-slate-800">Project Evaluation Board</h1>
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            <button onclick="showModal('publish')" class="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-5 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all active:scale-95">
+                                ${Icons.Send} Publish New Project
+                            </button>
+                            <div class="bg-slate-100 p-1 rounded-lg flex">
+                                <button onclick="setViewMode('teams')" class="px-4 py-2 text-sm font-medium rounded-md transition-all ${state.viewMode === 'teams' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}">
+                                    View by Teams
+                                </button>
+                                <button onclick="setViewMode('students')" class="px-4 py-2 text-sm font-medium rounded-md transition-all ${state.viewMode === 'students' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}">
+                                    View by Students
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+
+                        <!-- Main Content: Table Area -->
+                        <div class="xl:col-span-3 space-y-6">
+
+                            <!-- Filters & Actions Bar (Only show for Teams View) -->
+                            ${state.viewMode === 'teams' ? `
+                                <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                                    <div class="flex items-center gap-3 w-full md:w-auto">
+                                        <div class="relative group">
+                                            <button class="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-50 shadow-sm">
+                                                ${Icons.Filter}
+                                                <span>${state.filterStatus === 'All' ? 'All Status' : state.filterStatus}</span>
+                                                ${Icons.ChevronDown}
+                                            </button>
+                                            <div class="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-slate-100 hidden group-hover:block z-10 p-1">
+                                                ${['All', 'Completed', 'Pending', 'Late'].map(s => `
+                                                    <button onclick="setFilterStatus('${s}')" class="block w-full text-left px-4 py-2 text-sm hover:bg-indigo-50 text-slate-700 rounded-md">${s}</button>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+
+                                        <select onchange="setSortBy(this.value)" class="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-50 shadow-sm outline-none focus:ring-2 focus:ring-indigo-200">
+                                            <option value="default" ${state.sortBy === 'default' ? 'selected' : ''}>Default Sort</option>
+                                            <option value="marksHigh" ${state.sortBy === 'marksHigh' ? 'selected' : ''}>Highest Marks</option>
+                                            <option value="submissionEarly" ${state.sortBy === 'submissionEarly' ? 'selected' : ''}>Earliest Submission</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="flex items-center gap-3 w-full md:w-auto">
+                                        <button onclick="showModal('config')" class="flex items-center gap-2 text-slate-600 hover:text-indigo-600 font-medium text-sm px-3 py-2 rounded-lg hover:bg-indigo-50 transition-colors">
+                                            ${Icons.Settings.replace('width="20" height="20"', 'width="16" height="16"')} Configure Marks
+                                        </button>
+                                        <button class="flex items-center gap-2 bg-white text-slate-700 border border-slate-200 px-4 py-2 rounded-lg shadow-sm hover:bg-slate-50">
+                                            ${Icons.Download} <span>Report</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            ` : ''}
+
+                            <!-- Dynamic View Switching Container -->
+                            <div id="dashboard-table-area">
+                                <!-- Content rendered by renderTeamsTable() or renderStudentsList() -->
+                            </div>
+                        </div>
+
+                        <!-- Sidebar Widgets -->
+                        <div class="xl:col-span-1 space-y-6">
+
+                            <!-- Deadline Card -->
+                            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                                <div class="flex items-center gap-2 text-slate-800 font-bold mb-4">
+                                    ${Icons.Clock.replace('stroke="currentColor"', 'stroke="currentColor" class="text-rose-500"')}
+                                    <h3>Project Deadline</h3>
+                                </div>
+
+                                <div class="bg-slate-50 p-4 rounded-lg border border-slate-100 mb-4 text-center">
+                                    <span class="text-3xl font-black ${daysRemaining < 3 ? 'text-rose-600' : 'text-slate-700'}">
+                                        ${daysRemaining > 0 ? daysRemaining : 0}
+                                    </span>
+                                    <p class="text-xs text-slate-500 uppercase tracking-wide font-semibold mt-1">Days Remaining</p>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label class="text-xs font-semibold text-slate-500 uppercase">Target Date</label>
+                                    <div class="flex items-center gap-2 bg-white border border-slate-200 p-2 rounded-lg">
+                                        ${Icons.Calendar}
+                                        <input
+                                            type="date"
+                                            class="w-full outline-none text-sm text-slate-700 font-medium cursor-pointer"
+                                            value="${state.deadline.toISOString().split('T')[0]}"
+                                            onchange="setDeadline(this)"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Published Projects -->
+                            ${publishedProjectsHtml}
+
+                            <!-- Stats Summary -->
+                            <div class="bg-gradient-to-br from-indigo-600 to-violet-700 p-5 rounded-xl shadow-lg text-white">
+                                <h3 class="font-bold text-indigo-100 mb-4 border-b border-white/10 pb-2">Class Stats</h3>
+                                <div class="space-y-4">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-indigo-200">Total Students</span>
+                                        <span class="font-bold text-xl">${STUDENTS_3CSE01.length}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-indigo-200">Teams Formed</span>
+                                        <span class="font-bold text-xl">${state.teams.length}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-indigo-200">Submitted</span>
+                                        <span class="font-bold text-xl">${submittedTeamsCount}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = dashboardContent;
+
+            // Render the initial view mode content
+            if (state.viewMode === 'teams') {
+                document.getElementById('dashboard-table-area').innerHTML = renderTeamsTable();
+            } else {
+                renderStudentsList(); // Note: This function targets the inner div directly
+            }
+        }
+
+
+        function renderRequests() {
+            const container = document.getElementById('main-content-area');
+            if (!container) return; // FIX: Ensure container is defined
+
+            const requestsHtml = state.requests.length === 0 ? `
+                <div class="bg-white rounded-xl p-12 flex flex-col items-center text-center text-slate-400 shadow-sm border border-slate-200">
+                    ${Icons.CheckSolid}
+                    <h3 class="text-lg font-medium text-slate-800">All Caught Up!</h3>
+                    <p>No pending project requests at the moment.</p>
+                </div>
+            ` : state.requests.map(req => {
+                const membersHtml = req.members.map(m => `
+                    <div class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50">
+                        <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-600">
+                            ${m.name.charAt(0)}
+                        </div>
+                        <div class="overflow-hidden">
+                            <div class="text-sm font-medium text-slate-800 truncate">${m.name}</div>
+                            <div class="text-xs text-slate-500 font-mono truncate">${m.srn}</div>
+                        </div>
+                    </div>
+                `).join('');
+
+                return `
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
+                        <div class="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                            <div>
+                                <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2">
+                                    ${req.teamName}
+                                    <span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs font-medium">New Request</span>
+                                </h3>
+                                <div class="text-sm text-slate-500 mt-1">Proposed Title: <span class="font-medium text-slate-700">${req.title}</span></div>
+                                <div class="text-sm text-slate-500 mt-2 line-clamp-2">${req.description ? req.description : '<span class="text-slate-400">No description provided.</span>'}</div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="handleRequestAction(${req.id}, 'reject')" class="px-4 py-2 text-sm font-medium text-rose-600 bg-white border border-rose-200 rounded-lg hover:bg-rose-50 transition-colors">Reject</button>
+                                <button onclick="handleRequestAction(${req.id}, 'approve')" class="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-sm transition-colors">Approve & Create Team</button>
+                                <button onclick="showRequestDetails(${JSON.stringify(req).replace(/"/g,'&quot;')})" class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">View Details</button>
+                            </div>
+                        </div>
+                        <div class="p-5">
+                            <h4 class="text-xs font-bold text-slate-400 uppercase mb-3">Team Members (${req.members.length})</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">${membersHtml}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const html = `
+                <div class="animate-in fade-in slide-in-from-right-4 duration-500">
+                    <div class="mb-6 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-800">Project Requests</h2>
+                            <p class="text-slate-500">Review and approve new team formations and project titles.</p>
+                        </div>
+                    </div>
+                    <div class="space-y-4">${requestsHtml}</div>
+                </div>
+            `;
+            container.innerHTML = html;
+        }
+
+        function renderClasses() {
+            const container = document.getElementById('main-content-area');
+            if (!container) return; // FIX: Ensure container is defined
+            
+            const classCards = CLASSES.map(cls => `
+                <div onclick="selectClass({id: '${cls.id}', name: '${cls.name}', advisor: '${cls.advisor}', students: ${cls.students}})" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow cursor-pointer group">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-3 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                            ${Icons.BookOpen.replace('width="20" height="20"', 'width="24" height="24"')}
+                        </div>
+                        <span class="bg-slate-100 text-slate-600 px-2 py-1 rounded text-xs font-bold">${cls.students} Students</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-1">${cls.name}</h3>
+                    <p class="text-sm text-slate-500 mb-4">Advisor: ${cls.advisor}</p>
+                    <div class="flex items-center text-sm text-indigo-600 font-medium">
+                        Manage Projects ${Icons.ChevronRight.replace('width="14" height="14"', 'width="16" height="16"')}
+                    </div>
+                </div>
+            `).join('');
+
+            const html = `
+                <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-6">My Classes</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">${classCards}</div>
+                </div>
+            `;
+            container.innerHTML = html;
+        }
+
+
+        function renderModal(title, content, onClose, maxWidth = 'max-w-lg', modalId = 'modal') {
+            const modal = document.createElement('div');
+            modal.id = modalId;
+            modal.className = `fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4`;
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl shadow-2xl w-full ${maxWidth} max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
+                    <div class="flex justify-between items-center p-6 border-b border-slate-100">
+                        <h3 class="text-lg font-bold text-slate-800">${title}</h3>
+                        <button onclick="${onClose}" class="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 transition-colors">${Icons.X}</button>
+                    </div>
+                    <div class="p-6">
+                        ${content}
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function removeModal(modalId = 'modal') {
+             const modal = document.getElementById(modalId);
+             if (modal) modal.remove();
+        }
+
+        // Specific Modal Renderers
+        function renderMarksConfigModal() {
+            removeModal('config-modal');
+            if (!state.showMarksConfig) return;
+
+            const configInputs = MARKS_CONFIG_KEYS.map(key => `
+                <div class="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 transition-colors">
+                    <label class="capitalize font-medium text-slate-700">${key} Marks</label>
+                    <input
+                        type="number"
+                        class="w-20 p-2 border rounded-md text-center font-bold text-indigo-600 outline-none focus:ring-2 focus:ring-indigo-200"
+                        value="${state.marksConfig[key]}"
+                        onchange="setMarksConfigValue('${key}', this)"
+                    />
+                </div>
+            `).join('');
+
+            const content = `
+                <div class="space-y-4">
+                    <p class="text-sm text-slate-500 bg-amber-50 text-amber-700 p-3 rounded border border-amber-100 flex items-start gap-2">
+                        ${Icons.AlertCircle.replace('width="12" height="12"', 'width="16" height="16"').replace('class="mr-1"', 'class="mt-0.5 shrink-0"')}
+                        Changing these values sets the maximum possible score for each category. Existing marks exceeding the new maximum will need manual adjustment.
+                    </p>
+                    <div class="grid grid-cols-1 gap-4">${configInputs}</div>
+                    <div class="pt-4 flex justify-end">
+                        <button onclick="closeModal('config')" class="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
+                            ${Icons.Save} Save Configuration
+                        </button>
+                    </div>
+                </div>
+            `;
+            renderModal('Configure Scoring Rubric', content, `closeModal('config')`, 'max-w-lg', 'config-modal');
+        }
+
+        function renderPublishModal() {
+            removeModal('publish-modal');
+            if (!state.showPublishModal) return;
+
+            const project = state.newProject;
+            const loading = state.isAiLoading;
+            const aiButtonContent = loading
+                ? `${Icons.Loader} Auto-Generating...`
+                : `${Icons.Sparkles} Auto-Generate Description`;
+
+            const content = `
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Project Title</label>
+                        <input
+                            type="text"
+                            class="w-full p-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-200"
+                            placeholder="e.g. Smart Traffic Management System"
+                            value="${project.title}"
+                            oninput="updateNewProject('title', this)"
+                        />
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Type</label>
+                            <select onchange="updateNewProject('type', this)" class="w-full p-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-200">
+                                <option value="Team" ${project.type === 'Team' ? 'selected' : ''}>Team</option>
+                                <option value="Individual" ${project.type === 'Individual' ? 'selected' : ''}>Individual</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Deadline</label>
+                            <input
+                                type="date"
+                                class="w-full p-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-200"
+                                value="${project.deadline}"
+                                onchange="updateNewProject('deadline', this)"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-end mb-1">
+                            <label class="block text-sm font-medium text-slate-700">Description & Requirements</label>
+                            <button
+                                onclick="handleAiGenerateDescription()"
+                                ${loading || !project.title ? 'disabled' : ''}
+                                class="text-xs flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-medium bg-indigo-50 px-2 py-1 rounded hover:bg-indigo-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Enter a title first to generate description"
+                            >
+                                ${aiButtonContent}
+                            </button>
+                        </div>
+                        <textarea
+                            class="w-full p-2 border rounded-lg outline-none focus:ring-2 focus:ring-indigo-200 h-32 resize-none text-sm leading-relaxed"
+                            placeholder="Instructions for students..."
+                            oninput="updateNewProject('description', this)"
+                        >${project.description}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Target Class</label>
+                        <select class="w-full p-2 border rounded-lg bg-slate-50 text-slate-500 cursor-not-allowed" disabled>
+                            <option>3CSE01</option>
+                        </select>
+                        <p class="text-xs text-slate-400 mt-1">Currently selected class in dashboard.</p>
+                    </div>
+                    <div class="pt-4 flex justify-end gap-2">
+                        <button onclick="closeModal('publish')" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+                        <button onclick="handlePublishProject()" class="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
+                            ${Icons.Send.replace('width="18" height="18"', 'width="16" height="16"')} Publish to Class
+                        </button>
+                    </div>
+                </div>
+            `;
+            renderModal('Publish New Project', content, `closeModal('publish')`, 'max-w-lg', 'publish-modal');
+        }
+
+        function renderTeamDetailsModal() {
+            removeModal('team-details-modal');
+            if (!state.selectedTeam) return;
+
+            const team = state.selectedTeam;
+            const loading = state.isAiLoading;
+            const feedback = state.generatedFeedback;
+
+            const aiButtonContent = loading
+                ? `${Icons.Loader} Auto-Generating...`
+                : `${Icons.Sparkles} Generate AI Feedback`;
+
+            const membersHtml = team.members.map((m, i) => `
+                <tr class="bg-white">
+                    <td class="p-3 font-medium text-slate-800">${m.name}</td>
+                    <td class="p-3 text-slate-600 font-mono">${m.srn}</td>
+                    <td class="p-3 text-slate-500">${m.email || 'N/A'}</td>
+                </tr>
+            `).join('');
+
+            const aiFeedbackSection = `
+                <div class="pt-2 border-t border-slate-100">
+                    <div class="flex justify-between items-center mb-3">
+                        <h4 class="text-sm font-bold text-indigo-600 flex items-center gap-2">
+                            ${Icons.Sparkles.replace('width="16" height="16"', 'width="16" height="16"')} AI Performance Analysis
+                        </h4>
+                        <button
+                            onclick="handleAiGenerateFeedback(${JSON.stringify(team).replace(/"/g, '&quot;')})"
+                            ${loading ? 'disabled' : ''}
+                            class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-full border border-indigo-200 font-medium transition-colors flex items-center gap-1 disabled:opacity-50"
+                        >
+                            ${aiButtonContent}
+                        </button>
+                    </div>
+
+                    ${feedback ? `
+                        <div class="bg-gradient-to-r from-indigo-50 to-violet-50 p-4 rounded-lg border border-indigo-100 text-sm text-slate-700 leading-relaxed shadow-sm animate-in fade-in zoom-in duration-300">
+                            <span class="font-bold text-indigo-800 block mb-1">Feedback Generated:</span>
+                            "${feedback}"
+                        </div>
+                    ` : `
+                        <div class="p-4 rounded-lg border border-dashed border-slate-200 text-xs text-slate-400 text-center bg-slate-50/50">
+                            Click generate to analyze student performance based on current marks.
+                        </div>
+                    `}
+
+                    <!-- Milestone Generator -->
+                    <div class="mt-6 pt-4 border-t">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-sm font-bold text-slate-700 flex items-center gap-2">${Icons.Calendar.replace('width="16" height="16"', 'width="16" height="16"')} AI Milestone Generator</h4>
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs text-slate-500">Phases</label>
+                                <input id="milestone-count-input-${team.id}" type="number" min="1" max="10" value="${state.milestoneCount}" onchange="updateState({ milestoneCount: parseInt(this.value) })" class="w-16 p-1 text-sm rounded-md border border-slate-200" />
+                                <button
+                                    onclick="handleAiGenerateMilestones(${JSON.stringify(team).replace(/"/g, '&quot;')}, parseInt(document.getElementById('milestone-count-input-${team.id}').value || ${state.milestoneCount}))"
+                                    ${loading ? 'disabled' : ''}
+                                    class="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-full border border-emerald-200 font-medium transition-colors flex items-center gap-1 disabled:opacity-50"
+                                >
+                                    ${Icons.Sparkles} Generate Milestones
+                                </button>
+                            </div>
+                        </div>
+
+                        ${state.generatedMilestones && state.generatedMilestones.length > 0 ? `
+                            <div class="bg-white p-4 rounded-lg border border-slate-100 space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <div class="text-sm font-medium text-slate-700">Generated Milestones</div>
+                                    <div class="text-xs text-slate-500">You can save these to the team</div>
+                                </div>
+                                ${state.generatedMilestones.map((m, i) => `
+                                    <div key="milestone-${i}" class="p-3 bg-slate-50 rounded-md border border-slate-100">
+                                        <div class="text-sm font-semibold text-slate-800">${m.title}</div>
+                                        <div class="text-xs text-slate-600 mt-1">${m.objective}</div>
+                                        <div class="text-xs text-slate-400 mt-1">Estimated: ${m.durationDays || 'N/A'} days</div>
+                                    </div>
+                                `).join('')}
+                                <div class="flex justify-end">
+                                    <button onclick="handleSaveMilestones(${team.id})" class="px-3 py-1.5 bg-slate-900 text-white rounded-md text-sm">Save to Team</button>
+                                </div>
+                            </div>
+                        ` : `
+                            <div class="p-4 rounded-lg border border-dashed border-slate-200 text-xs text-slate-400 text-center bg-slate-50/50">
+                                Generated milestones will appear here. Use "Generate Milestones" to create a phased plan.
+                            </div>
+                        `}
+
+                        ${team.milestones && team.milestones.length > 0 ? `
+                            <div class="mt-4">
+                                <div class="text-xs text-slate-500 mb-2">Saved Milestones for this team</div>
+                                <ol class="list-decimal list-inside space-y-2 text-sm text-slate-700">
+                                    ${team.milestones.map(m => `<li><span class="font-semibold">${m.title}</span> — ${m.objective} <span class="text-xs text-slate-400">(${m.durationDays || 'N/A'}d)</span></li>`).join('')}
+                                </ol>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+
+            const content = `
+                <div class="space-y-6">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-slate-50 p-3 rounded-lg">
+                            <span class="text-xs text-slate-500 uppercase font-bold block mb-1">Project Title</span>
+                            <span class="text-slate-800 font-medium">${team.projectTitle}</span>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-lg">
+                            <span class="text-xs text-slate-500 uppercase font-bold block mb-1">Class & Section</span>
+                            <span class="text-slate-800 font-medium">${state.selectedSubject?.name} - ${state.selectedClass?.name}</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="text-sm font-semibold text-slate-600 mb-2">Project Description</h4>
+                        <div class="p-3 bg-slate-50 rounded-lg text-sm text-slate-700 mb-4">${team.description ? team.description : '<span class="text-slate-400">No description available.</span>'}</div>
+                    </div>
+
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                            ${Icons.Users.replace('width="20" height="20"', 'width="16" height="16"')} Team Members
+                        </h4>
+                        <div class="border rounded-lg overflow-hidden">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-slate-100 text-slate-600 font-semibold">
+                                    <tr><th class="p-3">Name</th><th class="p-3">SRN</th><th class="p-3">Email</th></tr>
+                                </thead>
+                                <tbody class="divide-y">${membersHtml}</tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    ${aiFeedbackSection}
+
+                    <div class="flex justify-end pt-2">
+                        <button onclick="closeModal('teamDetails')" class="px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors">Close</button>
+                    </div>
+                </div>
+            `;
+            renderModal(`${team.name} Details`, content, `closeModal('teamDetails')`, 'max-w-2xl', 'team-details-modal');
+        }
+
+
+        // --- Main Application Router ---
+        function renderApp() {
+            const mainContent = document.createElement('main');
+            mainContent.id = 'main-content';
+            mainContent.className = 'flex-1 overflow-auto relative';
+            mainContent.innerHTML = `
+                <!-- Mobile Header -->
+                <div class="md:hidden fixed top-0 w-full bg-white border-b z-30 p-4 flex justify-between items-center">
+                    <span class="font-bold text-lg">ProjX Monitor</span>
+                    <button class="text-slate-600">${Icons.Menu}</button>
+                </div>
+
+                <!-- Main Content Area Wrapper -->
+                <div id="main-content-area" class="max-w-7xl mx-auto p-6 md:p-8 pt-20 md:pt-8 h-full">
+                    <!-- Content injected here by specific render functions -->
+                </div>
+            `;
+
+            appContainer.innerHTML = renderSidebar() + mainContent.outerHTML;
+            const contentArea = document.getElementById('main-content-area');
+
+            // Render content based on activeView
+            switch (state.activeView) {
+                case 'classes':
+                    renderClasses();
+                    break;
+                case 'dashboard':
+                    if (state.selectedClass) {
+                        renderDashboard();
+                    } else {
+                        contentArea.innerHTML = renderSelectionScreen();
+                    }
+                    break;
+                case 'requests':
+                    renderRequests();
+                    break;
+                case 'students':
+                    // Students view wraps the list template with a title
+                    contentArea.innerHTML = `<div class="animate-in fade-in slide-in-from-right-4 duration-500"><h2 class="text-2xl font-bold text-slate-800 mb-6">Student Roster</h2></div>`;
+                    // The list function updates the inner content
+                    renderStudentsList();
+                    break;
+                case 'messages':
+                    renderMessagesView();
+                    break;
+            }
+
+            // Render Modals if state dictates
+            removeModal('config-modal');
+            if (state.showMarksConfig) renderMarksConfigModal();
+
+            removeModal('publish-modal');
+            if (state.showPublishModal) renderPublishModal();
+
+            removeModal('team-details-modal');
+            if (state.selectedTeam) renderTeamDetailsModal();
+
+            removeModal('request-details-modal');
+            if (state.selectedRequest) renderRequestDetailsModal();
+        }
+
+        // Initialize the app on page load
+        window.onload = renderApp;
+
+    </script>
+</body>
+</html>

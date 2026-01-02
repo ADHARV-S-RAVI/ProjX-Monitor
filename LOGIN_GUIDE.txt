@@ -1,0 +1,108 @@
+==================================================
+EAZYTRACK - COMPLETE LOGIN & ROLE SYSTEM
+==================================================
+
+PROJECT STRUCTURE:
+├── MainPage.html (Landing page with login)
+├── StudPage.html (Student Dashboard)
+├── TeacherPage.html (Teacher Dashboard)
+└── index.html (Old login page - can be removed)
+
+COMPLETE LOGIN FLOW:
+==================================================
+
+1. USER STARTS AT: MainPage.html (or index.html)
+   - Displays landing page with features
+   - Has "Log In" and "Sign Up" buttons
+   - Shows demo login option in modal
+
+2. USER CLICKS "Log In" → Opens Auth Modal
+   - Option 1: Email/Password (Firebase)
+   - Option 2: Google Sign-in (Firebase)
+   - Option 3: Demo Login (SRN-based) ← NEW
+
+3. DEMO LOGIN FLOW:
+   - User enters valid Student SRN
+   - Available SRNs: 24SUUBECS0047, 24SUUBECS0045, 24SUUBELCS001, etc.
+   - User data stored in sessionStorage
+   - Modal shows ROLE SELECTION
+
+4. ROLE SELECTION:
+   ├─ STUDENT ROLE
+   │  └─ Redirects to: StudPage.html
+   │     - Dashboard with projects
+   │     - Team formation
+   │     - Marks tracking
+   │     - AI mentor assistant
+   │
+   └─ TEACHER ROLE
+      └─ Redirects to: TeacherPage.html
+         - Class & subject selection
+         - Marks management
+         - Team evaluation
+         - Student roster
+
+5. SESSION MANAGEMENT:
+   - User stored in sessionStorage (survives page refresh within session)
+   - Each page validates session on load
+   - If no session → redirect back to MainPage.html
+   - Logout button clears session & returns to MainPage
+
+TESTING CREDENTIALS:
+==================================================
+Use any of these SRNs in Demo Login:
+- 24SUUBECS0047 (ADHARV S RAVI)
+- 24SUUBECS0045 (ADARSH SHUKLA)
+- 24SUUBECS0046 (ADARSH V)
+- 24SUUBECS0048 (ADITHI SRIKANTH SHASTRY)
+- 24SUUBECS0001 (A MOHITH SANTOSH)
+- 24SUUBELCS001 (ABHISHEK N J)
+- 24SUUBELCS002 (ADARSH B H)
+
+PASSWORD: Any password works (dummy login)
+
+PAGES OVERVIEW:
+==================================================
+
+MainPage.html
+  - Landing page
+  - Firebase auth integration
+  - Demo SRN login
+  - Role selection
+  - Navigation to StudPage or TeacherPage
+
+StudPage.html
+  - Student Dashboard
+  - Tabs: Dashboard, Team Formation, Submissions, Marks, Profile
+  - AI Mentor chat assistant
+  - Team management
+  - Project submission tracking
+
+TeacherPage.html
+  - Teacher Dashboard
+  - Subject & Class selection
+  - Marks management table
+  - Marks configuration
+  - Student roster
+  - Team evaluation
+
+KEY FEATURES:
+==================================================
+✓ Dummy login with SRN validation
+✓ Role-based dashboard routing
+✓ Session persistence
+✓ Login validation on each page
+✓ Automatic logout & redirect
+✓ Student and Teacher dashboards
+✓ Responsive UI with Tailwind CSS
+✓ AI Mentor integration (StudPage)
+✓ Marks management (TeacherPage)
+✓ Firebase auth fallback option
+
+NOTES:
+==================================================
+- index.html was original login page (can be deleted)
+- All pages use sessionStorage for session management
+- Each dashboard has logout button
+- Role selection happens AFTER demo login
+- Firebase auth can be used as alternative to demo login

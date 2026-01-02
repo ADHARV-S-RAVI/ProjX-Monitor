@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>ProjX Monitor - Messages (Student)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800">
+    <div class="max-w-4xl mx-auto p-6">
+        <h1 class="text-2xl font-bold mb-4">Messages</h1>
+        <div id="main" class="space-y-4"></div>
+    </div>
+
+    <script>
+        function showToast(msg, type='info'){
+            const toast=document.createElement('div'); toast.className='fixed bottom-6 right-6 bg-slate-800 text-white px-4 py-2 rounded'; toast.innerText=msg; document.body.appendChild(toast); setTimeout(()=>toast.remove(),2500);
+        }
+
+        const state={ messages: JSON.parse(localStorage.getItem('projx_messages')||'[]'), currentConv: null };
+
+        function getCurrentUser(){
+            const u=sessionStorage.getItem('currentUser'); if(!u){ return {id:'unknown', name:'Anonymous', role:'student'} } const p=JSON.parse(u); return p.srn?{id:p.srn, name:p.name, role:'student'}:{id:p.email||p.uid, name:p.name||p.email, role:'teacher'};
+        }
+
+        function save(){ localStorage.setItem('projx_messages', JSON.stringify(state.messages||[])); }
+
+        function getConvos(){
+            const user=getCurrentUser(); const map={}; (state.messages||[]).forEach(m=>{
+                if(m.from.id===user.id){ const other = m.to; map[other.id]=other; }
+                if(m.to.id===user.id){ const other=m.from; map[other.id]=other; }
+            }); return Object.values(map);
+        }
+
+        function render(){
+            const container=document.getElementById('main'); const user=getCurrentUser();
+            const convos=getConvos();
+            const listHtml=convos.length?convos.map(c=>`<div class="p-3 bg-white rounded mb-2 cursor-pointer" onclick="openConv('${c.id}')">${c.name} <div class='text-xs text-slate-400'>${c.role}</div></div>`).join(''):'<div class="p-3 text-slate-400">No conversations yet.</div>';
+
+            container.innerHTML = `
+                <div class="grid grid-cols-3 gap-6">
+                    <div class="col-span-1 bg-white p-4 rounded shadow"> 
+                        <div class="mb-3 text-sm font-semibold">Conversations</div>
+                        ${listHtml}
+                        <button onclick="openCompose()" class="mt-4 px-3 py-1 bg-indigo-600 text-white rounded">New Message</button>
+                    </div>
+                    <div class="col-span-2 bg-white p-4 rounded shadow"> 
+                        ${state.currentConv?renderConvHtml(state.currentConv):'<div class="text-slate-400">Select a conversation or compose a new message.</div>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderConvHtml(conv){
+            const user=getCurrentUser(); const msgs=(state.messages||[]).filter(m=> (m.from.id===user.id && m.to.id===conv.id) || (m.to.id===user.id && m.from.id===conv.id)).sort((a,b)=>new Date(a.timestamp)-new Date(b.timestamp));
+            const htmlMsgs=msgs.map(m=>`<div class="mb-2"><div class="${m.from.id===user.id?'text-right':''}"><div class="inline-block ${m.from.id===user.id? 'bg-indigo-600 text-white':'bg-slate-100 text-slate-700'} px-3 py-2 rounded">${m.content}</div></div><div class="text-xs text-slate-400 mt-1">${new Date(m.timestamp).toLocaleString()}</div></div>`).join('');
+            return `
+                <h2 class="text-lg font-semibold mb-2">Chat with ${conv.name}</h2>
+                <div class="max-h-60 overflow-y-auto p-3 border rounded mb-3">${htmlMsgs || '<div class="text-slate-400">No messages yet.</div>'}</div>
+                <div class="flex gap-2"><input id="compose-text" class="flex-1 border rounded px-3 py-2" /><button onclick="sendTo('${conv.id}','${conv.name}','${conv.role}')" class="px-3 py-2 bg-indigo-600 text-white rounded">Send</button></div>
+            `;
+        }
+
+        function openConv(id){ const conv=getConvos().find(c=>c.id===id); if(!conv) return; state.currentConv=conv; render(); }
+
+        function openCompose(){ removeModal(); const modal=document.createElement('div'); modal.id='modal'; modal.className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4'; modal.innerHTML=`<div class='bg-white rounded p-4 w-full max-w-md'><h3 class='font-bold mb-2'>New Message</h3><div class='mb-2'><label class='text-xs text-slate-500'>Recipient Id (teacher email or student SRN)</label><input id='recipient-id' class='w-full border rounded p-2 text-sm' placeholder='teacher@uni.edu' /></div><div class='mb-2'><label class='text-xs text-slate-500'>Message</label><textarea id='recipient-text' class='w-full border rounded p-2 text-sm' rows='4'></textarea></div><div class='flex justify-end gap-2'><button onclick='removeModal()' class='px-3 py-1 rounded bg-slate-100'>Cancel</button><button onclick='composeSend()' class='px-3 py-1 rounded bg-indigo-600 text-white'>Send</button></div></div>`; document.body.appendChild(modal); }
+
+        function removeModal(){ const m=document.getElementById('modal'); if(m) m.remove(); }
+
+        function composeSend(){ const id=document.getElementById('recipient-id').value.trim(); const txt=document.getElementById('recipient-text').value.trim(); if(!id||!txt){ showToast('Please provide recipient and message'); return; } const user=getCurrentUser(); state.messages.push({ id: Date.now(), from:{id:user.id,name:user.name,role:user.role}, to:{id, name:id, role: id.includes('@')?'teacher':'student'}, content: txt, timestamp: new Date().toISOString() }); save(); removeModal(); showToast('Message sent'); render(); }
+
+        function sendTo(id, name, role){ const txt=document.getElementById('compose-text').value.trim(); if(!txt){ showToast('Enter a message'); return; } const user=getCurrentUser(); state.messages.push({ id: Date.now(), from:{id:user.id,name:user.name,role:user.role}, to:{id,name,role}, content: txt, timestamp: new Date().toISOString() }); save(); state.currentConv = {id,name,role}; document.getElementById('compose-text').value=''; showToast('Message sent'); render(); }
+
+        // init
+        if(!sessionStorage.getItem('currentUser')){
+            alert('Please login as a student (via index.html dummy login) to use messages.');
+        }
+        render();
+    </script>
+</body>
+</html>

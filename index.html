@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProjX Monitor - Project Tracking System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            scroll-behavior: smooth;
+        }
+        .blue-gradient-text {
+            background: linear-gradient(90deg, #2563eb, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .blob {
+            position: absolute;
+            filter: blur(40px);
+            z-index: -1;
+            opacity: 0.4;
+        }
+        .modal-enter {
+            opacity: 0;
+            transform: scale(0.95);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .modal-active {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.5, 0, 0, 1);
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 overflow-x-hidden">
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 bg-white/90 backdrop-blur-md border-b border-slate-200 transition-all duration-300" id="navbar">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center gap-2 cursor-pointer" onclick="window.scrollTo(0,0)">
+                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+                        <i class="ph-bold ph-kanban text-xl"></i>
+                    </div>
+                    <span class="font-bold text-xl tracking-tight text-slate-900">ProjX Monitor</span>
+                </div>
+
+                <!-- Desktop Menu -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#about" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">About</a>
+                    <a href="#features" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Features</a>
+                    <a href="#reviews" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Reviews</a>
+                </div>
+
+                <!-- Auth Buttons -->
+                <div class="hidden md:flex items-center space-x-4" id="nav-auth-buttons">
+                    <button onclick="openModal('login')" class="text-sm font-medium text-slate-600 hover:text-slate-900">Log In</button>
+                    <button onclick="openModal('signup')" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-full transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-600/40">
+                        Sign Up
+                    </button>
+                </div>
+                
+                <!-- Dashboard Button (shown when logged in) -->
+                <button onclick="goToDashboard()" class="hidden bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-5 py-2.5 rounded-full transition-all shadow-lg shadow-green-600/20 hover:shadow-green-600/40" id="nav-dashboard-btn">
+                    Dashboard
+                </button>
+                
+                <!-- User Profile (Hidden by default) -->
+                <div class="hidden items-center space-x-4" id="nav-user-profile">
+                    <span class="text-sm font-medium text-slate-600" id="nav-user-name">User</span>
+                    <button onclick="handleLogout()" class="text-sm font-medium text-red-500 hover:text-red-700">Logout</button>
+                </div>
+
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden flex items-center">
+                    <button id="mobile-menu-btn" class="text-slate-600 hover:text-slate-900 p-2">
+                        <i class="ph ph-list text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu Dropdown -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-b border-slate-200">
+            <div class="px-4 pt-2 pb-4 space-y-1">
+                <a href="#about" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-50">About</a>
+                <a href="#reviews" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-50">Reviews</a>
+                <button onclick="openModal('login')" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-50">Log In</button>
+                <button onclick="openModal('signup')" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-blue-600 hover:bg-blue-50">Sign Up</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative pt-32 pb-20 lg:pt-40 lg:pb-28 overflow-hidden">
+        <!-- Background Image with Overlay -->
+        <div class="absolute inset-0 z-0">
+            <img src="https://i.ibb.co/v41NTDqB/web-Starter-IMG.jpg" alt="Background" class="w-full h-full object-cover blur-[2px]">
+            <div class="absolute inset-0 bg-white/85 backdrop-blur-[1px]"></div>
+            <div class="absolute inset-0 bg-gradient-to-r from-white via-white/90 to-blue-50/30"></div>
+        </div>
+
+        <!-- Background Blobs -->
+        <div class="blob bg-blue-200 w-96 h-96 rounded-full top-0 left-0 -translate-x-1/2 -translate-y-1/2 mix-blend-multiply"></div>
+        
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+                <!-- Hero Content -->
+                <div class="text-center lg:text-left reveal active">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50/80 border border-blue-100 text-blue-600 text-xs font-semibold mb-6 backdrop-blur-sm">
+                        <span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                        v2.0 Now Available
+                    </div>
+                    <h1 class="text-4xl lg:text-6xl font-bold text-slate-900 leading-tight mb-6">
+                        A Simple Project <br>
+                        <span class="blue-gradient-text">Tracking System</span> <br>
+                        for Colleges
+                    </h1>
+                    <p class="text-lg text-slate-600 mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                        Streamline the academic workflow. Students submit effortlessly, teachers track progress instantly. The bridge between assignment and evaluation.
+                    </p>
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                        <button onclick="openModal('signup')" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-8 py-4 rounded-xl shadow-xl shadow-blue-600/20 transition-all transform hover:-translate-y-1 flex items-center justify-center gap-2">
+                            Get Started
+                            <i class="ph-bold ph-arrow-right"></i>
+                        </button>
+                        <a href="#about" class="bg-white/80 hover:bg-white text-slate-700 border border-slate-200 font-medium px-8 py-4 rounded-xl transition-all flex items-center justify-center gap-2 backdrop-blur-sm shadow-sm hover:shadow-md">
+                            Learn More
+                        </a>
+                    </div>
+                    
+                    <div class="mt-10 flex items-center justify-center lg:justify-start gap-6 text-slate-500 text-sm font-medium">
+                        <div class="flex items-center gap-2">
+                            <i class="ph-fill ph-check-circle text-blue-500"></i> Free for Students
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="ph-fill ph-check-circle text-blue-500"></i> Real-time Updates
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hero Illustration -->
+                <div class="relative lg:h-[500px] flex items-center justify-center reveal active delay-200">
+                     <!-- Dashboard Image Card -->
+                     <div class="relative w-full max-w-lg bg-white p-2 rounded-2xl shadow-2xl border border-slate-200 transform rotate-2 hover:rotate-0 transition-transform duration-500 z-10 group cursor-pointer">
+                        <img src="https://i.ibb.co/v41NTDqB/web-Starter-IMG.jpg" alt="Project Dashboard Interface" class="w-full h-auto rounded-xl border border-slate-100 transition-transform group-hover:scale-[1.02] duration-500">
+                        
+                        <!-- Decorative Elements -->
+                        <div class="absolute -right-6 top-12 bg-white p-3 rounded-xl shadow-lg border border-slate-100 animate-bounce hidden sm:block">
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                                <span class="text-xs font-bold text-slate-700">Submission Received</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Background Decor -->
+                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-tr from-blue-100/30 to-transparent rounded-full -z-10"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section (Interactive Counter) -->
+    <section class="py-10 bg-white border-y border-slate-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                <div class="reveal">
+                    <div class="text-3xl lg:text-4xl font-bold text-blue-600 mb-1" data-target="50">0+</div>
+                    <div class="text-sm text-slate-500 font-medium">Colleges Partnered</div>
+                </div>
+                <div class="reveal transition-delay-100">
+                    <div class="text-3xl lg:text-4xl font-bold text-blue-600 mb-1" data-target="12000">0+</div>
+                    <div class="text-sm text-slate-500 font-medium">Active Students</div>
+                </div>
+                <div class="reveal transition-delay-200">
+                    <div class="text-3xl lg:text-4xl font-bold text-blue-600 mb-1" data-target="45000">0+</div>
+                    <div class="text-sm text-slate-500 font-medium">Projects Tracked</div>
+                </div>
+                <div class="reveal transition-delay-300">
+                    <div class="text-3xl lg:text-4xl font-bold text-blue-600 mb-1" data-target="98">0%</div>
+                    <div class="text-sm text-slate-500 font-medium">Submission Rate</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About / Features Section -->
+    <section id="features" class="py-24 bg-white relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16 reveal">
+                <h2 class="text-base text-blue-600 font-semibold tracking-wide uppercase mb-2">How it works</h2>
+                <p class="text-3xl font-bold text-slate-900 mb-4">Everything you need to manage academic projects.</p>
+                <p class="text-slate-600 text-lg">A centralized hub connecting students and faculty, replacing chaotic email threads with structured workflows.</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Feature 1 -->
+                <div class="bg-slate-50 rounded-2xl p-8 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 reveal">
+                    <div class="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 mb-6">
+                        <i class="ph-duotone ph-student text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">For Students</h3>
+                    <p class="text-slate-600 leading-relaxed">
+                        Submit assignments, track deadlines, and get real-time feedback on your work. Never miss a submission date again.
+                    </p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="bg-slate-50 rounded-2xl p-8 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 reveal transition-delay-100">
+                    <div class="w-14 h-14 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 mb-6">
+                        <i class="ph-duotone ph-chalkboard-teacher text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">For Teachers</h3>
+                    <p class="text-slate-600 leading-relaxed">
+                        Create checklists, manage cohorts, review submissions efficiently, and grade projects in one unified dashboard.
+                    </p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="bg-slate-50 rounded-2xl p-8 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-slate-100 reveal transition-delay-200">
+                    <div class="w-14 h-14 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 mb-6">
+                        <i class="ph-duotone ph-chart-line-up text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">Project Evaluation</h3>
+                    <p class="text-slate-600 leading-relaxed">
+                        Transparent evaluation criteria and progress tracking help maintain academic standards and fair grading.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Reviews / Testimonials Section -->
+    <section id="reviews" class="py-24 bg-slate-50 border-t border-slate-200 relative overflow-hidden">
+        <!-- Decorative Quote Icon -->
+        <div class="absolute top-10 right-10 text-slate-200/50 pointer-events-none">
+            <i class="ph-fill ph-quotes text-9xl"></i>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="text-center mb-16 reveal">
+                <h2 class="text-3xl font-bold text-slate-900">Loved by Students & Faculty</h2>
+                <p class="text-slate-600 mt-4">See what colleges across India are saying about ProjX Monitor.</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Review 1 -->
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 reveal">
+                    <div class="flex items-center gap-1 text-yellow-400 mb-4">
+                        <i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i>
+                    </div>
+                    <p class="text-slate-600 mb-6 italic">"Finally, a way to keep track of 60+ student projects without drowning in emails. The dashboard is incredibly intuitive."</p>
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">R</div>
+                        <div>
+                            <h4 class="font-bold text-slate-900">Dr. Rajesh Kumar</h4>
+                            <p class="text-xs text-slate-500">HOD CSE, Delhi Tech University</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Review 2 -->
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 reveal transition-delay-100">
+                    <div class="flex items-center gap-1 text-yellow-400 mb-4">
+                        <i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i>
+                    </div>
+                    <p class="text-slate-600 mb-6 italic">"The automated checklists helped our team stay on track for the Final Year Project. Best part? No more missed deadlines!"</p>
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold text-lg">A</div>
+                        <div>
+                            <h4 class="font-bold text-slate-900">Ananya Singh</h4>
+                            <p class="text-xs text-slate-500">Student, IIT Bombay</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Review 3 -->
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 reveal transition-delay-200">
+                    <div class="flex items-center gap-1 text-yellow-400 mb-4">
+                        <i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star-half"></i>
+                    </div>
+                    <p class="text-slate-600 mb-6 italic">"Implementation was smooth. The support team helped us set up our entire batch in less than 2 days."</p>
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold text-lg">V</div>
+                        <div>
+                            <h4 class="font-bold text-slate-900">Vijyalakshmi H R</h4>
+                            <p class="text-xs text-slate-500">Professor, SNPSU</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="mt-16 text-center pb-20 bg-slate-50">
+        <button onclick="openModal('signup')" class="inline-flex items-center justify-center px-8 py-4 text-base font-medium text-white bg-slate-900 rounded-full hover:bg-slate-800 hover:scale-105 transition-all shadow-lg">
+            Start Tracking Now
+        </button>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 pt-16 pb-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-8">
+                <div class="text-center md:text-left">
+                    <div class="flex items-center justify-center md:justify-start gap-2 mb-4">
+                        <div class="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white text-xs">
+                            <i class="ph-bold ph-kanban"></i>
+                        </div>
+                        <span class="font-bold text-lg text-slate-900">ProjX Monitor</span>
+                    </div>
+                    <p class="text-slate-500 text-sm mb-2 max-w-xs">
+                        Empowering Indian institutions with smart project management tools.
+                    </p>
+                    <div class="text-slate-500 text-sm flex flex-col gap-1">
+                        <span class="flex items-center justify-center md:justify-start gap-2 hover:text-blue-600 transition-colors"><i class="ph-fill ph-phone"></i> +91 98765 43210</span>
+                        <span class="flex items-center justify-center md:justify-start gap-2"><i class="ph-fill ph-map-pin"></i> Koramangala, Bengaluru, India</span>
+                    </div>
+                </div>
+                <div class="flex space-x-6">
+                    <a href="#" class="text-slate-400 hover:text-blue-600 transition-colors transform hover:scale-110"><i class="ph-fill ph-twitter-logo text-xl"></i></a>
+                    <a href="#" class="text-slate-400 hover:text-blue-600 transition-colors transform hover:scale-110"><i class="ph-fill ph-github-logo text-xl"></i></a>
+                    <a href="#" class="text-slate-400 hover:text-blue-600 transition-colors transform hover:scale-110"><i class="ph-fill ph-linkedin-logo text-xl"></i></a>
+                </div>
+            </div>
+            <div class="mt-8 text-center text-sm text-slate-400 border-t border-slate-100 pt-8">
+                &copy; 2025 ProjX Monitor. Made with <i class="ph-fill ph-heart text-red-400"></i> in India.
+            </div>
+        </div>
+    </footer>
+
+    <!-- Modal Overlay -->
+    <div id="auth-modal" class="fixed inset-0 z-[100] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity opacity-0" id="modal-backdrop"></div>
+
+        <div class="fixed inset-0 z-10 overflow-y-auto">
+            <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+                
+                <!-- Modal Panel -->
+                <div id="modal-panel" class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg modal-enter flex flex-col max-h-[90vh]">
+                    
+                    <!-- Close Button -->
+                    <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors bg-slate-100 hover:bg-slate-200 rounded-full p-1 z-10">
+                        <i class="ph-bold ph-x text-xl"></i>
+                    </button>
+
+                    <!-- Content Container (Scrollable) -->
+                    <div class="px-6 pt-8 pb-6 overflow-y-auto custom-scrollbar">
+                        
+                        <!-- 0. AUTH VIEW (Login/Signup) -->
+                        <div id="auth-view">
+                             <div class="text-center mb-6">
+                                <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 mb-4">
+                                    <i class="ph-duotone ph-lock-key text-2xl text-blue-600"></i>
+                                </div>
+                                <h3 class="text-2xl font-bold leading-6 text-slate-900 mb-2" id="auth-title">Welcome Back</h3>
+                                <p class="text-sm text-slate-500" id="auth-subtitle">Sign in to access your dashboard</p>
+                            </div>
+
+                            <div class="space-y-4">
+                                <!-- Google Login -->
+                                <button onclick="window.handleGoogleLogin()" class="w-full flex items-center justify-center gap-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-2.5 rounded-xl transition-all shadow-sm">
+                                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5" alt="Google">
+                                    Sign in with Google
+                                </button>
+
+                                <div class="relative flex py-1 items-center">
+                                    <div class="flex-grow border-t border-slate-200"></div>
+                                    <span class="flex-shrink-0 mx-4 text-slate-400 text-xs uppercase font-medium">Or</span>
+                                    <div class="flex-grow border-t border-slate-200"></div>
+                                </div>
+
+                                <!-- Email Form -->
+                                <form onsubmit="event.preventDefault(); window.handleEmailAuth()" id="email-auth-form" class="space-y-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
+                                        <input type="email" id="auth-email" required placeholder="name@college.edu" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1">Password</label>
+                                        <input type="password" id="auth-password" required placeholder="••••••••" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm">
+                                    </div>
+                                    
+                                    <div id="auth-error" class="text-red-500 text-xs hidden text-center bg-red-50 p-2 rounded"></div>
+
+                                    <button type="submit" id="auth-submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors shadow-lg shadow-blue-600/20 flex items-center justify-center">
+                                        <span id="auth-btn-text">Log In</span>
+                                        <i class="ph-bold ph-arrow-right ml-2"></i>
+                                    </button>
+                                </form>
+
+                                <div class="text-center mt-4">
+                                    <p class="text-sm text-slate-600">
+                                        <span id="auth-switch-text">Don't have an account?</span>
+                                        <button onclick="window.toggleAuthMode()" id="auth-switch-btn" class="text-blue-600 font-semibold hover:underline">Sign Up</button>
+                                    </p>
+                                </div>
+
+                                <!-- Dummy Login with SRN -->
+                                <div class="relative flex py-2 items-center">
+                                    <div class="flex-grow border-t border-slate-200"></div>
+                                    <span class="flex-shrink-0 mx-4 text-slate-400 text-xs uppercase font-medium">Demo Login</span>
+                                    <div class="flex-grow border-t border-slate-200"></div>
+                                </div>
+
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1">Student SRN (Demo)</label>
+                                        <input type="text" id="dummy-srn-input" placeholder="e.g., 24SUUBECS0047" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all text-sm">
+                                    </div>
+                                    <button type="button" onclick="window.handleDummyLogin()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-xl transition-colors shadow-lg shadow-green-600/20">
+                                        Enter as Student
+                                    </button>
+                                    <p class="text-xs text-slate-500 text-center">Try: 24SUUBECS0047, 24SUUBECS0045, 24SUUBELCS001</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 1. Role Selection View (Hidden initially) -->
+                        <div id="role-selection-view" class="hidden">
+                            <div class="text-center">
+                                <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 mb-4">
+                                    <i class="ph-duotone ph-user-circle text-2xl text-blue-600"></i>
+                                </div>
+                                <h3 class="text-2xl font-bold leading-6 text-slate-900 mb-2">Select Your Role</h3>
+                                <p class="text-sm text-slate-500 mb-8">How will you be using ProjX Monitor?</p>
+
+                                <div class="grid gap-4">
+                                    <!-- Student Option -->
+                                    <button onclick="window.selectRole('student')" class="group relative flex items-center p-4 rounded-xl border-2 border-slate-100 hover:border-blue-500 hover:bg-blue-50 transition-all text-left">
+                                        <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                            <i class="ph-bold ph-student text-2xl"></i>
+                                        </div>
+                                        <div class="ml-4">
+                                            <p class="font-bold text-slate-900">Continue as Student</p>
+                                            <p class="text-xs text-slate-500 mt-0.5">Submit projects & view grades</p>
+                                        </div>
+                                        <div class="ml-auto text-slate-300 group-hover:text-blue-600">
+                                            <i class="ph-bold ph-caret-right text-xl"></i>
+                                        </div>
+                                    </button>
+
+                                    <!-- Teacher Option -->
+                                    <button onclick="window.selectRole('teacher')" class="group relative flex items-center p-4 rounded-xl border-2 border-slate-100 hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left">
+                                        <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                            <i class="ph-bold ph-chalkboard-teacher text-2xl"></i>
+                                        </div>
+                                        <div class="ml-4">
+                                            <p class="font-bold text-slate-900">Continue as Teacher</p>
+                                            <p class="text-xs text-slate-500 mt-0.5">Manage cohorts & evaluate</p>
+                                        </div>
+                                        <div class="ml-auto text-slate-300 group-hover:text-indigo-600">
+                                            <i class="ph-bold ph-caret-right text-xl"></i>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="bg-slate-50 -mx-6 -mb-6 mt-6 px-6 py-3 border-t border-slate-100 text-center">
+                                <button onclick="window.logout()" class="text-xs text-red-500 hover:underline">Sign Out</button>
+                            </div>
+                        </div>
+
+                        <!-- 2. Student Profile Form -->
+                        <div id="student-form-view" class="hidden">
+                            <div class="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+                                <button onclick="showRoleSelection()" class="text-slate-400 hover:text-blue-600"><i class="ph-bold ph-arrow-left text-xl"></i></button>
+                                <h3 class="text-xl font-bold text-slate-900">Complete Student Profile</h3>
+                            </div>
+                            
+                            <form onsubmit="event.preventDefault(); submitProfile('Student');" class="space-y-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="col-span-2">
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1">Full Name</label>
+                                        <input type="text" id="std-name" placeholder="Enter your full name" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm">
+                                    </div>
+                                    <div class="col-span-2">
+                                        <label class="block text-xs font-semibold text-slate-500 mb-1">Email Address</label>
+                                        <input type="email" id="std-email" placeholder="Enter your email" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm">
+                                    </div>
+                                    <div class="col-span-2">
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1">Phone Number</label>
+                                        <input type="tel" placeholder="+91 98765 43210" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm">
+                                    </div>
+                                    
+                                    <div class="col-span-2">
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1">College Name</label>
+                                        <select id="student-college" onchange="toggleOtherCollege('student')" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm bg-white">
+                                            <option value="">Select College</option>
+                                            <option value="Sapthagiri NPS University">Sapthagiri NPS University</option>
+                                            <option value="RV University">RV University</option>
+                                            <option value="PES University">PES University</option>
+                                            <option value="Reva University">Reva University</option>
+                                            <option value="Christ University">Christ University</option>
+                                            <option value="Other">Other (Type Manually)</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div id="student-other-college" class="col-span-2 hidden">
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1">Enter College Name</label>
+                                        <input type="text" placeholder="Type your college name..." class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm">
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1">Department</label>
+                                        <select class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm bg-white">
+                                            <option>CSE</option>
+                                            <option>ECE</option>
+                                            <option>AIML</option>
+                                            <option>ISE</option>
+                                            <option>EEE</option>
+                                            <option>Mech</option>
+                                            <option>Civil</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1">Semester</label>
+                                        <select class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm bg-white">
+                                            <option>1st Sem</option>
+                                            <option>2nd Sem</option>
+                                            <option>3rd Sem</option>
+                                            <option>4th Sem</option>
+                                            <option>5th Sem</option>
+                                            <option>6th Sem</option>
+                                            <option>7th Sem</option>
+                                            <option>8th Sem</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1">Section</label>
+                                        <input type="text" placeholder="e.g. A, B, Gamma" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm">
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1">SRN / Roll No</label>
+                                        <input type="text" placeholder="e.g. R21EF001" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm">
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-blue-600/20">
+                                    Continue
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- 3. Teacher Profile Form -->
+                        <div id="teacher-form-view" class="hidden">
+                             <div class="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+                                <button onclick="showRoleSelection()" class="text-slate-400 hover:text-indigo-600"><i class="ph-bold ph-arrow-left text-xl"></i></button>
+                                <h3 class="text-xl font-bold text-slate-900">Complete Teacher Profile</h3>
+                            </div>
+
+                            <form onsubmit="event.preventDefault(); submitProfile('Teacher');" class="space-y-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="col-span-2">
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1">Full Name</label>
+                                        <input type="text" id="fac-name" placeholder="Enter your full name" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm">
+                                    </div>
+                                    <div class="col-span-2">
+                                        <label class="block text-xs font-semibold text-slate-500 mb-1">Email Address</label>
+                                        <input type="email" id="fac-email" placeholder="Enter your email" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm">
+                                    </div>
+                                    <div class="col-span-2">
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1">Phone Number</label>
+                                        <input type="tel" placeholder="+91 98765 43210" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm">
+                                    </div>
+                                    
+                                    <div class="col-span-2">
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1">College Name</label>
+                                        <select id="teacher-college" onchange="toggleOtherCollege('teacher')" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm bg-white">
+                                            <option value="">Select College</option>
+                                            <option value="Sapthagiri NPS University">Sapthagiri NPS University</option>
+                                            <option value="RV University">RV University</option>
+                                            <option value="PES University">PES University</option>
+                                            <option value="Reva University">Reva University</option>
+                                            <option value="Christ University">Christ University</option>
+                                            <option value="Other">Other (Type Manually)</option>
+                                        </select>
+                                    </div>
+
+                                    <div id="teacher-other-college" class="col-span-2 hidden">
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1">Enter College Name</label>
+                                        <input type="text" placeholder="Type your college name..." class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm">
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1">Department</label>
+                                        <select class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm bg-white">
+                                            <option>CSE</option>
+                                            <option>ECE</option>
+                                            <option>AIML</option>
+                                            <option>ISE</option>
+                                            <option>EEE</option>
+                                            <option>Mech</option>
+                                            <option>Civil</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1">Designation</label>
+                                        <select class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm bg-white">
+                                            <option>Assistant Professor</option>
+                                            <option>Associate Professor</option>
+                                            <option>Professor</option>
+                                            <option>HOD</option>
+                                            <option>Teaching Assistant</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-span-2">
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1">Employee / Faculty ID</label>
+                                        <input type="text" placeholder="e.g. FAC101" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-sm">
+                                    </div>
+
+                                    <div class="col-span-2">
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1">Subjects Taught</label>
+                                        <div class="border border-slate-300 rounded-lg p-2 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 bg-white transition-all">
+                                            <div id="tags-container" class="flex flex-wrap gap-2 mb-1"></div>
+                                            <input type="text" id="subject-input" placeholder="Type subject & hit Enter..." class="w-full outline-none text-sm bg-transparent">
+                                        </div>
+                                        <p class="text-[10px] text-slate-400 mt-1">Press Enter to add multiple subjects.</p>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-indigo-600/20">
+                                    Save and Continue
+                                </button>
+                            </form>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const modal = document.getElementById('auth-modal');
+        const modalBackdrop = document.getElementById('modal-backdrop');
+        const modalPanel = document.getElementById('modal-panel');
+        const modalTitle = document.getElementById('modal-title');
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const navbar = document.getElementById('navbar');
+
+        // Modal View Elements
+        const authView = document.getElementById('auth-view');
+        const roleSelectionView = document.getElementById('role-selection-view');
+        const studentFormView = document.getElementById('student-form-view');
+        const teacherFormView = document.getElementById('teacher-form-view');
+
+        // Toggle Mobile Menu
+        mobileMenuBtn.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 10) {
+                navbar.classList.add('shadow-md');
+            } else {
+                navbar.classList.remove('shadow-md');
+            }
+        });
+
+        // --- INTERACTIVE: Scroll Reveal Animation ---
+        function reveal() {
+            var reveals = document.querySelectorAll(".reveal");
+            for (var i = 0; i < reveals.length; i++) {
+                var windowHeight = window.innerHeight;
+                var elementTop = reveals[i].getBoundingClientRect().top;
+                var elementVisible = 100;
+                if (elementTop < windowHeight - elementVisible) {
+                    reveals[i].classList.add("active");
+                }
+            }
+        }
+        window.addEventListener("scroll", reveal);
+        reveal();
+
+        // --- INTERACTIVE: Number Counter ---
+        const counters = document.querySelectorAll('[data-target]');
+        let counted = false;
+
+        const runCounter = () => {
+            if(window.scrollY > 300 && !counted) {
+                counters.forEach(counter => {
+                    const target = +counter.getAttribute('data-target');
+                    const count = +counter.innerText.replace(/[+,%]/g, ''); 
+                    const inc = target / 100; 
+
+                    const updateCount = () => {
+                        const c = +counter.innerText.replace(/[+,%]/g, '');
+                        if (c < target) {
+                            counter.innerText = Math.ceil(c + inc) + (counter.innerText.includes('%') ? '%' : '+');
+                            setTimeout(updateCount, 20);
+                        } else {
+                            counter.innerText = target + (counter.getAttribute('data-target') === '98' ? '%' : '+');
+                        }
+                    };
+                    updateCount();
+                });
+                counted = true;
+            }
+        }
+        window.addEventListener('scroll', runCounter);
+
+
+        // Modal Functions
+        window.openModal = function(mode) {
+            modal.classList.remove('hidden');
+            
+            if (mode === 'role-select') {
+                // Show role selection directly
+                roleSelectionView.classList.remove('hidden');
+                authView.classList.add('hidden');
+            } else if (window.currentUser) {
+                showRoleSelection();
+            } else {
+                showAuth();
+                // Set mode
+                if(mode === 'signup') {
+                    window.setAuthMode('signup');
+                } else {
+                    window.setAuthMode('login');
+                }
+            }
+
+            setTimeout(() => {
+                modalBackdrop.classList.remove('opacity-0');
+                modalPanel.classList.remove('modal-enter');
+                modalPanel.classList.add('modal-active');
+            }, 10);
+        }
+
+        window.closeModal = function() {
+            modalBackdrop.classList.add('opacity-0');
+            modalPanel.classList.remove('modal-active');
+            modalPanel.classList.add('modal-enter');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                // Reset form states
+                if (!window.currentUser) showAuth();
+            }, 300);
+        }
+
+        window.showAuth = function() {
+            authView.classList.remove('hidden');
+            roleSelectionView.classList.add('hidden');
+            studentFormView.classList.add('hidden');
+            teacherFormView.classList.add('hidden');
+        }
+
+        window.showForm = function(type) {
+            roleSelectionView.classList.add('hidden');
+            if(type === 'student') {
+                studentFormView.classList.remove('hidden');
+                // Auto-fill if user exists
+                if (window.currentUser) {
+                     document.getElementById('std-name').value = window.currentUser.displayName || '';
+                     document.getElementById('std-email').value = window.currentUser.email || '';
+                }
+            } else {
+                teacherFormView.classList.remove('hidden');
+                if (window.currentUser) {
+                     document.getElementById('fac-name').value = window.currentUser.displayName || '';
+                     document.getElementById('fac-email').value = window.currentUser.email || '';
+                }
+            }
+        }
+
+        window.showRoleSelection = function() {
+            authView.classList.add('hidden');
+            roleSelectionView.classList.remove('hidden');
+            studentFormView.classList.add('hidden');
+            teacherFormView.classList.add('hidden');
+        }
+
+        window.toggleOtherCollege = function(type) {
+            const selectId = type === 'student' ? 'student-college' : 'teacher-college';
+            const inputId = type === 'student' ? 'student-other-college' : 'teacher-other-college';
+            const select = document.getElementById(selectId);
+            const input = document.getElementById(inputId);
+            
+            if (select.value === 'Other') {
+                input.classList.remove('hidden');
+            } else {
+                input.classList.add('hidden');
+            }
+        }
+
+        window.submitProfile = function(role) {
+            const message = document.createElement('div');
+            message.className = 'fixed bottom-5 right-5 bg-slate-800 text-white px-6 py-3 rounded-lg shadow-lg z-[200] transform translate-y-10 opacity-0 transition-all duration-300';
+            message.innerHTML = `<i class="ph-bold ph-check-circle inline-block mr-2 text-green-400"></i> Profile saved! Redirecting to ${role} Dashboard...`;
+            document.body.appendChild(message);
+
+            setTimeout(() => {
+                message.classList.remove('translate-y-10', 'opacity-0');
+            }, 10);
+
+            closeModal();
+
+            setTimeout(() => {
+                message.classList.add('translate-y-10', 'opacity-0');
+                
+                // Redirect to appropriate dashboard
+                if (role === 'Student') {
+                    window.location.href = 'StudPage.html';
+                } else if (role === 'Teacher') {
+                    window.location.href = 'TeacherPage.html';
+                }
+                
+                setTimeout(() => message.remove(), 300);
+            }, 2000);
+        }
+
+        // Tag Input Logic for Subjects
+        const subjectInput = document.getElementById('subject-input');
+        const tagsContainer = document.getElementById('tags-container');
+
+        subjectInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const value = this.value.trim();
+                if (value) {
+                    addTag(value);
+                    this.value = '';
+                }
+            }
+        });
+
+        function addTag(text) {
+            const tag = document.createElement('span');
+            tag.className = 'inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100';
+            tag.innerHTML = `
+                ${text}
+                <button type="button" class="hover:text-indigo-900"><i class="ph-bold ph-x"></i></button>
+            `;
+            
+            // Remove on click
+            tag.querySelector('button').addEventListener('click', function() {
+                tag.remove();
+            });
+
+            tagsContainer.appendChild(tag);
+        }
+
+        // Close modal when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modalBackdrop || e.target.closest('.fixed.inset-0') === e.target) {
+                closeModal();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+                closeModal();
+            }
+        });
+    </script>
+
+    <!-- Firebase Configuration & Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB3fARHsKcLO-z1lpxnHVwuc-LaXXDmde0",
+            authDomain: "eazytrack-9ee74.firebaseapp.com",
+            projectId: "eazytrack-9ee74",
+            storageBucket: "eazytrack-9ee74.firebasestorage.app",
+            messagingSenderId: "395496350124",
+            appId: "1:395496350124:web:1b84d6c24966dee87dda09",
+            measurementId: "G-NS4JCMGT2W"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const auth = getAuth(app);
+        const googleProvider = new GoogleAuthProvider();
+
+        // Global User State
+        window.currentUser = null;
+
+        // Student Database for dummy login
+        const STUDENT_DATABASE = [
+            { srn: "24SUUBECS0047", name: "ADHARV S RAVI", section: "3CSE01" },
+            { srn: "24SUUBECS0045", name: "ADARSH SHUKLA", section: "3CSE01" },
+            { srn: "24SUUBECS0046", name: "ADARSH V", section: "3CSE01" },
+            { srn: "24SUUBECS0048", name: "ADITHI SRIKANTH SHASTRY", section: "3CSE01" },
+            { srn: "24SUUBECS0049", name: "ADITHYA KARANTH S", section: "3CSE01" },
+            { srn: "24SUUBECS0051", name: "ADITHYA N C", section: "3CSE01" },
+            { srn: "24SUUBECS0001", name: "A MOHITH SANTOSH", section: "3CSE01" },
+            { srn: "24SUUBELCS001", name: "ABHISHEK N J", section: "Lateral" },
+            { srn: "24SUUBELCS002", name: "ADARSH B H", section: "Lateral" },
+            { srn: "24SUUBELCS003", name: "AKASH GOWDA S", section: "Lateral" }
+        ];
+
+        // Auth Mode Toggle Logic (Login <-> Signup)
+        let authMode = 'login';
+        
+        window.setAuthMode = function(mode) {
+            authMode = mode;
+            const title = document.getElementById('auth-title');
+            const subtitle = document.getElementById('auth-subtitle');
+            const btnText = document.getElementById('auth-btn-text');
+            const switchText = document.getElementById('auth-switch-text');
+            const switchBtn = document.getElementById('auth-switch-btn');
+            const errorDiv = document.getElementById('auth-error');
+
+            errorDiv.classList.add('hidden'); // Clear errors
+
+            if (mode === 'signup') {
+                title.textContent = "Create Account";
+                subtitle.textContent = "Join ProjX Monitor today";
+                btnText.textContent = "Sign Up";
+                switchText.textContent = "Already have an account?";
+                switchBtn.textContent = "Log In";
+            } else {
+                title.textContent = "Welcome Back";
+                subtitle.textContent = "Sign in to access your dashboard";
+                btnText.textContent = "Log In";
+                switchText.textContent = "Don't have an account?";
+                switchBtn.textContent = "Sign Up";
+            }
+        }
+
+        window.toggleAuthMode = function() {
+            window.setAuthMode(authMode === 'login' ? 'signup' : 'login');
+        }
+
+        // Handle Google Login
+        window.handleGoogleLogin = async function() {
+            try {
+                const result = await signInWithPopup(auth, googleProvider);
+                // Success - AuthStateChanged will handle UI update
+            } catch (error) {
+                console.error(error);
+                showError(error.message);
+            }
+        }
+
+        // Handle Email Auth
+        window.handleEmailAuth = async function() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const btn = document.getElementById('auth-submit-btn');
+            
+            btn.disabled = true;
+            btn.classList.add('opacity-75', 'cursor-wait');
+
+            try {
+                if (authMode === 'login') {
+                    await signInWithEmailAndPassword(auth, email, password);
+                } else {
+                    const result = await createUserWithEmailAndPassword(auth, email, password);
+                    // Update display name on signup
+                    await updateProfile(result.user, {
+                        displayName: email.split('@')[0]
+                    });
+                }
+                // Success - onAuthStateChanged will handle the UI update
+            } catch (error) {
+                console.error(error);
+                let msg = "Authentication failed.";
+                if(error.code === 'auth/invalid-credential') msg = "Invalid email or password.";
+                if(error.code === 'auth/email-already-in-use') msg = "Email already in use.";
+                if(error.code === 'auth/weak-password') msg = "Password should be at least 6 characters.";
+                showError(msg);
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('opacity-75', 'cursor-wait');
+            }
+        }
+
+        function showError(msg) {
+            const errorDiv = document.getElementById('auth-error');
+            errorDiv.textContent = msg;
+            errorDiv.classList.remove('hidden');
+        }
+
+        window.logout = async function() {
+            await signOut(auth);
+            sessionStorage.removeItem('currentUser');
+            window.location.reload();
+        }
+
+        window.handleLogout = async function() {
+            if (confirm('Are you sure you want to logout?')) {
+                await signOut(auth);
+                sessionStorage.removeItem('currentUser');
+                window.location.reload();
+            }
+        }
+
+        // Dashboard Navigation
+        window.goToDashboard = function() {
+            const user = JSON.parse(sessionStorage.getItem('sessionUser'));
+            if (user) {
+                sessionStorage.setItem('currentUser', JSON.stringify(user));
+                window.location.href = 'StudPage.html';
+            } else {
+                alert('Please login first');
+                openModal('login');
+            }
+        }
+
+        // Dummy Login with SRN
+        window.handleDummyLogin = function() {
+            const srnInput = document.getElementById('dummy-srn-input');
+            const srn = srnInput.value.toUpperCase().trim();
+            
+            if (!srn) {
+                alert('Please enter a valid SRN');
+                return;
+            }
+
+            const student = STUDENT_DATABASE.find(s => s.srn === srn);
+            if (!student) {
+                alert('SRN not found in database. Try one of the sample SRNs.');
+                return;
+            }
+
+            // Store user in sessionStorage
+            sessionStorage.setItem('currentUser', JSON.stringify(student));
+            sessionStorage.setItem('sessionUser', JSON.stringify(student));
+            
+            // Show role selection
+            closeModal();
+            setTimeout(() => {
+                openModal('role-select');
+            }, 300);
+        }
+
+        // Role Selection
+        window.selectRole = function(role) {
+            const user = JSON.parse(sessionStorage.getItem('currentUser'));
+            if (!user) {
+                alert('Please login first');
+                return;
+            }
+
+            // Store role in sessionStorage
+            sessionStorage.setItem('selectedRole', role);
+            
+            // Show the profile form based on role
+            window.showForm(role);
+        }
+
+        // Monitor Auth State
+        onAuthStateChanged(auth, (user) => {
+            window.currentUser = user;
+            const navAuthBtns = document.getElementById('nav-auth-buttons');
+            const navUserProfile = document.getElementById('nav-user-profile');
+            const navUserName = document.getElementById('nav-user-name');
+            const navDashboardBtn = document.getElementById('nav-dashboard-btn');
+
+            if (user) {
+                console.log("User logged in:", user.displayName || user.email);
+                
+                // Store user in sessionStorage for dashboard access
+                sessionStorage.setItem('currentUser', JSON.stringify({
+                    srn: user.uid,
+                    name: user.displayName || user.email.split('@')[0],
+                    email: user.email,
+                    uid: user.uid
+                }));
+                
+                // Update Nav with real-time name
+                navAuthBtns.classList.add('hidden');
+                navAuthBtns.classList.remove('md:flex');
+                
+                navUserProfile.classList.remove('hidden');
+                navUserProfile.classList.add('md:flex');
+                navDashboardBtn.classList.remove('hidden');
+                
+                navUserName.textContent = user.displayName || user.email.split('@')[0];
+
+                // If modal is open and on auth view, switch to role selection
+                const authView = document.getElementById('auth-view');
+                const modal = document.getElementById('auth-modal');
+                if (!modal.classList.contains('hidden') && !authView.classList.contains('hidden')) {
+                    setTimeout(() => window.showRoleSelection(), 100);
+                }
+            } else {
+                console.log("User logged out");
+                
+                // Clear sessionStorage
+                sessionStorage.removeItem('currentUser');
+                sessionStorage.removeItem('selectedRole');
+                
+                // Reset Nav
+                navAuthBtns.classList.remove('hidden');
+                navAuthBtns.classList.add('md:flex');
+                
+                navUserProfile.classList.add('hidden');
+                navUserProfile.classList.remove('md:flex');
+                navDashboardBtn.classList.add('hidden');
+                
+                // Reset form when logged out
+                if (!modal.classList.contains('hidden')) {
+                    window.showAuth();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
