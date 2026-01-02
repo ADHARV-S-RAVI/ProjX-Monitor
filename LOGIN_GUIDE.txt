@@ -51,13 +51,13 @@ COMPLETE LOGIN FLOW:
 TESTING CREDENTIALS:
 ==================================================
 Use any of these SRNs in Demo Login:
-- 24SUUBECS0047 (ADHARV S RAVI)
-- 24SUUBECS0045 (ADARSH SHUKLA)
-- 24SUUBECS0046 (ADARSH V)
-- 24SUUBECS0048 (ADITHI SRIKANTH SHASTRY)
-- 24SUUBECS0001 (A MOHITH SANTOSH)
-- 24SUUBELCS001 (ABHISHEK N J)
-- 24SUUBELCS002 (ADARSH B H)
+- 24ECS0047 (ADHARV S RAVI)
+- 24BECS0045 (ADARSH SHUKLA)
+- 24SECS0046 (ADARSH V)
+- 24BECS0048 (ADITHI SRIKANTH SHASTRY)
+- 24SECS0001 (A MOHITH SANTOSH)
+- 24ELCS001 (ABHISHEK N J)
+- 24SLCS002 (ADARSH B H)
 
 PASSWORD: Any password works (dummy login)
 
@@ -106,3 +106,4 @@ NOTES:
 - Each dashboard has logout button
 - Role selection happens AFTER demo login
 - Firebase auth can be used as alternative to demo login
+
